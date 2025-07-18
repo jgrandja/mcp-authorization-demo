@@ -1,0 +1,14 @@
+pluginManagement {
+	repositories {
+		gradlePluginPortal()
+		mavenCentral()
+		maven { url "https://repo.spring.io/milestone" }
+		maven { url "https://repo.spring.io/snapshot" }
+	}
+}
+
+rootProject.name = 'mcp-authorization-demo'
+
+include 'authorization-server'
+include 'mcp-client'
+include 'mcp-resource-server'
