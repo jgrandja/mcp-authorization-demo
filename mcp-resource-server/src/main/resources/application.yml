@@ -9,6 +9,11 @@ logging:
     org.springframework.security.oauth2: INFO
 
 spring:
+  ai:
+    mcp:
+      server:
+        name: mcp-weather-service
+        version: 0.0.1
   security:
     oauth2:
       resourceserver:

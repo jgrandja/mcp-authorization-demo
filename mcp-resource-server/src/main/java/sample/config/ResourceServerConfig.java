@@ -41,7 +41,7 @@ public class ResourceServerConfig {
 		http
 			.authorizeHttpRequests(authorize ->
 				authorize
-					.requestMatchers("/messages/**").hasAuthority("SCOPE_message.read")
+					.requestMatchers("/sse", "/mcp/message", "/messages/**").hasAuthority("SCOPE_message.read")
 			)
 			.oauth2ResourceServer(resourceServer ->
 				resourceServer

@@ -44,8 +44,6 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
-import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -105,7 +103,18 @@ public class AuthorizationServerConfig {
 				.scope("client.read")
 				.build();
 
-		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient);
+		RegisteredClient mcpClient = RegisteredClient.withId(UUID.randomUUID().toString())
+				.clientId("mcp-client")
+				.clientSecret("{noop}mcp-secret")
+				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+				.redirectUri("http://127.0.0.1:8080/authorize/oauth2/code/mcp-client")
+				.scope("message.read")
+				.build();
+
+		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient, mcpClient);
 	}
 	// @formatter:on
 
@@ -119,10 +128,11 @@ public class AuthorizationServerConfig {
 		return new InMemoryOAuth2AuthorizationConsentService();
 	}
 
-	@Bean
-	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
-		return AuthorizationServerCustomizations::withAudienceRestrictedAccessTokens;
-	}
+	// FIXME Temporarily disable Resource Indicators for OAuth 2.0 (RFC 8707)
+//	@Bean
+//	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+//		return AuthorizationServerCustomizations::withAudienceRestrictedAccessTokens;
+//	}
 
 	@Bean
 	public JWKSource<SecurityContext> jwkSource() {

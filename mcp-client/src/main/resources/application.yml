@@ -9,6 +9,16 @@ logging:
     org.springframework.security.oauth2: INFO
 
 spring:
+  config:
+    import: "optional:classpath:/creds.yaml"
+  ai:
+    mcp:
+      client:
+        sse:
+          connections:
+            server1:
+              url: http://localhost:8090
+        type: sync
   thymeleaf:
     cache: false
   security:
@@ -20,7 +30,7 @@ spring:
             client-id: oidc-client
             client-secret: secret
             authorization-grant-type: authorization_code
-            redirect-uri: "http://127.0.0.1:8080/login/oauth2/code/{registrationId}"
+            redirect-uri: "http://127.0.0.1:8080/login/oauth2/code/oidc-client"
             scope: openid, profile
             client-name: oidc-client
           registrar-client:
@@ -30,6 +40,21 @@ spring:
             authorization-grant-type: client_credentials
             scope: client.create
             client-name: registrar-client
+          mcp-client-user:
+            provider: spring
+            client-id: mcp-client
+            client-secret: mcp-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://127.0.0.1:8080/authorize/oauth2/code/mcp-client"
+            scope: message.read
+            client-name: mcp-client-user
+          mcp-client-service:
+            provider: spring
+            client-id: mcp-client
+            client-secret: mcp-secret
+            authorization-grant-type: client_credentials
+            scope: message.read
+            client-name: mcp-client-service
         provider:
           spring:
             issuer-uri: http://localhost:9000

@@ -52,7 +52,8 @@ final class AuthorizationServerCustomizations {
 			.authorizationEndpoint(authorizationEndpoint ->
 				authorizationEndpoint
 					.consentPage("/oauth2/consent")
-					.authenticationProviders(configureAuthenticationValidator())
+					// FIXME Temporarily disable Resource Indicators for OAuth 2.0 (RFC 8707)
+//					.authenticationProviders(configureAuthenticationValidator())
 			)
 			.oidc(oidc ->
 				oidc
