@@ -105,7 +105,21 @@ public class AuthorizationServerConfig {
 				.scope("client.read")
 				.build();
 
-		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient);
+		RegisteredClient mcpClient = RegisteredClient.withId(UUID.randomUUID().toString())
+				.clientId("mcp-client")
+				.clientSecret("{noop}mcp-secret")
+				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+				.redirectUri("http://127.0.0.1:8080/authorize/oauth2/code/authserver")
+				.redirectUri("http://localhost:8080/authorize/oauth2/code/authserver")
+				.redirectUri("http://localhost:8081/authorize/oauth2/code/authserver")
+				.redirectUri("http://localhost:8082/login/oauth2/code/authserver")
+				.redirectUri("http://localhost:8083/login/oauth2/code/authserver")
+				.build();
+
+		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient, mcpClient);
 	}
 	// @formatter:on
 

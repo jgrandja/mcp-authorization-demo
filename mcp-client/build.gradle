@@ -1,5 +1,5 @@
 plugins {
-	id "org.springframework.boot" version "4.0.0-M1"
+	id "org.springframework.boot" version "3.5.3"
 	id "io.spring.dependency-management" version "1.1.0"
 	id "java"
 }
@@ -12,6 +12,7 @@ java {
 }
 
 repositories {
+	mavenLocal()
 	mavenCentral()
 	maven { url "https://repo.spring.io/milestone" }
 	maven { url "https://repo.spring.io/snapshot" }
@@ -22,6 +23,10 @@ dependencies {
 	implementation "org.springframework.boot:spring-boot-starter-thymeleaf"
 	implementation "org.springframework.boot:spring-boot-starter-security"
 	implementation "org.springframework.boot:spring-boot-starter-oauth2-client"
+	implementation platform("org.springframework.ai:spring-ai-bom:1.1.0-SNAPSHOT")
+	implementation "org.springframework.ai:spring-ai-starter-mcp-client"
+	implementation "org.springframework.ai:spring-ai-starter-model-anthropic"
+	implementation "io.modelcontextprotocol.sdk:mcp:0.11.0-SNAPSHOT"
 	implementation "org.webjars:webjars-locator-lite"
 	implementation "org.webjars:bootstrap:5.2.3"
 	implementation "org.webjars:popper.js:2.9.3"

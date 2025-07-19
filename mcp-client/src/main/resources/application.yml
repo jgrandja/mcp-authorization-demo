@@ -9,6 +9,16 @@ logging:
     org.springframework.security.oauth2: INFO
 
 spring:
+  config:
+    import: "optional:classpath:/creds.yaml"
+  ai:
+    mcp:
+      client:
+        sse:
+          connections:
+            server1:
+              url: http://localhost:8090
+        type: sync
   thymeleaf:
     cache: false
   security:
@@ -30,6 +40,16 @@ spring:
             authorization-grant-type: client_credentials
             scope: client.create
             client-name: registrar-client
+          authserver:
+            provider: spring
+            client-id: mcp-client
+            client-secret: mcp-secret
+            authorization-grant-type: authorization_code
+          authserver-client-credentials:
+            provider: spring
+            client-id: mcp-client
+            client-secret: mcp-secret
+            authorization-grant-type: client_credentials
         provider:
           spring:
             issuer-uri: http://localhost:9000
