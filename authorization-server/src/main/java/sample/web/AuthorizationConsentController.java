@@ -112,6 +112,10 @@ public class AuthorizationConsentController {
 					"message.write",
 					"This application will be able to add new messages. It will also be able to edit and delete existing messages."
 			);
+			scopeDescriptions.put(
+					"weather.read",
+					"This application will be able to read the weather."
+			);
 		}
 
 		public final String scope;

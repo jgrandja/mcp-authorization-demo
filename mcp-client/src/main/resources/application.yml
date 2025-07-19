@@ -9,6 +9,16 @@ logging:
     org.springframework.security.oauth2: INFO
 
 spring:
+  config:
+    import: "optional:classpath:/creds.yaml"
+  ai:
+    mcp:
+      client:
+        sse:
+          connections:
+            server1:
+              url: http://127.0.0.1:8090
+        type: sync
   thymeleaf:
     cache: false
   security:

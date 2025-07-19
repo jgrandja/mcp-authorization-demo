@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spring Authorization Server sample</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.css" th:href="@{/webjars/bootstrap/css/bootstrap.css}" />
+</head>
+<body>
+<div th:replace="~{page-templates :: navbar}"></div>
+<div class="container">
+    <div th:if="${currentWeather}" class="row pt-5">
+        <div class="col">
+            <p>
+                Weather in <span class="fw-bold" th:text="${city}"></span>.<br/>
+                <span th:text="${currentWeather}"></span>
+            </p>
+        </div>
+    </div>
+    <div class="row pt-5">
+        <div class="col">
+            <p>
+                In which city would you like to see the weather?
+            </p>
+        </div>
+    </div>
+    <div class="row pt-1">
+        <div class="col">
+            <form class="row g-3" name="weather_form" method="get" th:action="@{/weather}">
+                <div class="col-md-4">
+                    <input type="text" name="city" class="form-control">
+                </div>
+                <div class="col-md-12">
+                    <button class="btn btn-primary" type="submit">
+                        Ask the LLM
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="/webjars/bootstrap/js/bootstrap.bundle.min.js" th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script src="/webjars/jquery/jquery.min.js" th:src="@{/webjars/jquery/jquery.min.js}"></script>
+<script src="/webjars/popper.js/umd/popper.js" th:src="@{/webjars/popper.js/umd/popper.js}"></script>
+</body>
+</html>
