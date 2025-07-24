@@ -28,9 +28,6 @@ import static org.springframework.security.config.Customizer.withDefaults;
 
 /**
  * @author Joe Grandja
- * @author Dmitriy Dubson
- * @author Steve Riesenberg
- * @since 0.0.1
  */
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
@@ -43,7 +40,7 @@ public class SecurityConfig {
 		http
 			.authorizeHttpRequests(authorize ->
 				authorize
-					.requestMatchers("/webjars/**", "/assets/**", "/jwks", "/logged-out").permitAll()
+					.requestMatchers("/webjars/**", "/assets/**", "/logged-out").permitAll()
 					.anyRequest().authenticated()
 			)
 			.oauth2Login(oauth2Login ->

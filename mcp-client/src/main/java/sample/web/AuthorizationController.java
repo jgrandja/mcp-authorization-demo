@@ -31,32 +31,24 @@ import org.springframework.web.client.RestClientResponseException;
 
 import static org.springframework.security.oauth2.client.web.client.RequestAttributeClientRegistrationIdResolver.clientRegistrationId;
 
-
 /**
  * @author Joe Grandja
- * @since 0.0.1
  */
 @Controller
 public class AuthorizationController {
-	private final RestClient defaultClientRestClient;
-	private final RestClient selfSignedDemoClientRestClient;
+	private final RestClient restClient;
 	private final String messagesBaseUri;
-	private final String userMessagesBaseUri;
 
 	public AuthorizationController(
-			@Qualifier("default-client-rest-client") RestClient defaultClientRestClient,
-			@Qualifier("self-signed-demo-client-rest-client") RestClient selfSignedDemoClientRestClient,
-			@Value("${messages.base-uri}") String messagesBaseUri,
-			@Value("${user-messages.base-uri}") String userMessagesBaseUri) {
-		this.defaultClientRestClient = defaultClientRestClient;
-		this.selfSignedDemoClientRestClient = selfSignedDemoClientRestClient;
+			@Qualifier("oauth2-rest-client") RestClient restClient,
+			@Value("${messages.base-uri}") String messagesBaseUri) {
+		this.restClient = restClient;
 		this.messagesBaseUri = messagesBaseUri;
-		this.userMessagesBaseUri = userMessagesBaseUri;
 	}
 
 	@GetMapping(value = "/authorize", params = "grant_type=authorization_code")
 	public String authorizationCodeGrant(Model model) {
-		String[] messages = this.defaultClientRestClient
+		String[] messages = this.restClient
 				.get()
 				.uri(this.messagesBaseUri)
 				.attributes(clientRegistrationId("messaging-client-authorization-code"))
@@ -83,9 +75,9 @@ public class AuthorizationController {
 		return "index";
 	}
 
-	@GetMapping(value = "/authorize", params = {"grant_type=client_credentials", "client_auth=client_secret"})
-	public String clientCredentialsGrantUsingClientSecret(Model model) {
-		String[] messages = this.defaultClientRestClient
+	@GetMapping(value = "/authorize", params = {"grant_type=client_credentials"})
+	public String clientCredentialsGrant(Model model) {
+		String[] messages = this.restClient
 				.get()
 				.uri(this.messagesBaseUri)
 				.attributes(clientRegistrationId("messaging-client-client-credentials"))
@@ -94,63 +86,6 @@ public class AuthorizationController {
 		model.addAttribute("messages", messages);
 
 		return "index";
-	}
-
-	@GetMapping(value = "/authorize", params = {"grant_type=client_credentials", "client_auth=mtls"})
-	public String clientCredentialsGrantUsingMutualTLS(Model model) {
-		String[] messages = this.defaultClientRestClient
-				.get()
-				.uri(this.messagesBaseUri)
-				.attributes(clientRegistrationId("mtls-demo-client-client-credentials"))
-				.retrieve()
-				.body(String[].class);
-		model.addAttribute("messages", messages);
-
-		return "index";
-	}
-
-	@GetMapping(value = "/authorize", params = {"grant_type=client_credentials", "client_auth=self_signed_mtls"})
-	public String clientCredentialsGrantUsingSelfSignedMutualTLS(Model model) {
-		String[] messages = this.selfSignedDemoClientRestClient
-				.get()
-				.uri(this.messagesBaseUri)
-				.attributes(clientRegistrationId("mtls-self-signed-demo-client-client-credentials"))
-				.retrieve()
-				.body(String[].class);
-		model.addAttribute("messages", messages);
-
-		return "index";
-	}
-
-	@GetMapping(value = "/authorize", params = {"grant_type=token_exchange", "use_case=delegation"})
-	public String tokenExchangeGrantUsingDelegation(Model model) {
-		String[] messages = this.defaultClientRestClient
-				.get()
-				.uri(this.userMessagesBaseUri + "?use_case=delegation")
-				.attributes(clientRegistrationId("user-client-authorization-code"))
-				.retrieve()
-				.body(String[].class);
-		model.addAttribute("messages", messages);
-
-		return "index";
-	}
-
-	@GetMapping(value = "/authorize", params = {"grant_type=token_exchange", "use_case=impersonation"})
-	public String tokenExchangeGrantUsingImpersonation(Model model) {
-		String[] messages = this.defaultClientRestClient
-				.get()
-				.uri(this.userMessagesBaseUri + "?use_case=impersonation")
-				.attributes(clientRegistrationId("user-client-authorization-code"))
-				.retrieve()
-				.body(String[].class);
-		model.addAttribute("messages", messages);
-
-		return "index";
-	}
-
-	@GetMapping(value = "/authorize", params = "grant_type=device_code")
-	public String deviceCodeGrant() {
-		return "device-activate";
 	}
 
 	@ExceptionHandler(RestClientResponseException.class)
