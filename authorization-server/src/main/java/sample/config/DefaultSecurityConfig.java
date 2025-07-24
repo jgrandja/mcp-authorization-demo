@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,9 @@
  */
 package sample.config;
 
-import sample.federation.FederatedIdentityAuthenticationSuccessHandler;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.session.SessionRegistry;
@@ -28,13 +27,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 /**
  * @author Joe Grandja
- * @author Steve Riesenberg
- * @since 1.1
  */
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
@@ -46,26 +42,13 @@ public class DefaultSecurityConfig {
 		http
 			.authorizeHttpRequests(authorize ->
 				authorize
-					.requestMatchers("/assets/**", "/login").permitAll()
 					.anyRequest().authenticated()
 			)
-			.formLogin(formLogin ->
-				formLogin
-					.loginPage("/login")
-			)
-			.oauth2Login(oauth2Login ->
-				oauth2Login
-					.loginPage("/login")
-					.successHandler(authenticationSuccessHandler())
-			);
+			.formLogin(Customizer.withDefaults());
 
 		return http.build();
 	}
 	// @formatter:on
-
-	private AuthenticationSuccessHandler authenticationSuccessHandler() {
-		return new FederatedIdentityAuthenticationSuccessHandler();
-	}
 
 	// @formatter:off
 	@Bean

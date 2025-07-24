@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * @author Daniel Garnier-Moiroux
+ * @author Joe Grandja
  */
 @Controller
 public class AuthorizationConsentController {
@@ -52,8 +52,7 @@ public class AuthorizationConsentController {
 	public String consent(Principal principal, Model model,
 			@RequestParam(OAuth2ParameterNames.CLIENT_ID) String clientId,
 			@RequestParam(OAuth2ParameterNames.SCOPE) String scope,
-			@RequestParam(OAuth2ParameterNames.STATE) String state,
-			@RequestParam(name = OAuth2ParameterNames.USER_CODE, required = false) String userCode) {
+			@RequestParam(OAuth2ParameterNames.STATE) String state) {
 
 		// Remove scopes that were already approved
 		Set<String> scopesToApprove = new HashSet<>();
@@ -83,12 +82,7 @@ public class AuthorizationConsentController {
 		model.addAttribute("scopes", withDescription(scopesToApprove));
 		model.addAttribute("previouslyApprovedScopes", withDescription(previouslyApprovedScopes));
 		model.addAttribute("principalName", principal.getName());
-		model.addAttribute("userCode", userCode);
-		if (StringUtils.hasText(userCode)) {
-			model.addAttribute("requestURI", "/oauth2/device_verification");
-		} else {
-			model.addAttribute("requestURI", "/oauth2/authorize");
-		}
+		model.addAttribute("requestURI", "/oauth2/authorize");
 
 		return "consent";
 	}
@@ -117,14 +111,6 @@ public class AuthorizationConsentController {
 			scopeDescriptions.put(
 					"message.write",
 					"This application will be able to add new messages. It will also be able to edit and delete existing messages."
-			);
-			scopeDescriptions.put(
-					"user.read",
-					"This application will be able to read your user information."
-			);
-			scopeDescriptions.put(
-					"other.scope",
-					"This is another scope example of a scope description."
 			);
 		}
 
