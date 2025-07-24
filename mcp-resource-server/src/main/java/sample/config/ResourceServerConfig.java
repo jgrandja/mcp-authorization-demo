@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,19 +24,10 @@ import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * @author Joe Grandja
- * @since 0.0.1
  */
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
 public class ResourceServerConfig {
-
-	/*
-		NOTE:
-		The `NimbusJwtDecoder` `@Bean` autoconfigured by Spring Boot will contain
-		an `OAuth2TokenValidator<Jwt>` of type `X509CertificateThumbprintValidator`.
-		This is the validator responsible for validating the `x5t#S256` claim (if available)
-		in the `Jwt` against the SHA-256 Thumbprint of the supplied `X509Certificate`.
-	 */
 
 	// @formatter:off
 	@Bean
