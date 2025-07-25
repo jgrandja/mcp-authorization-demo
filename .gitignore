@@ -8,6 +8,7 @@ classes/
 target/
 *.log
 *.log.*
+creds.yaml
 
 ### STS ###
 .apt_generated
