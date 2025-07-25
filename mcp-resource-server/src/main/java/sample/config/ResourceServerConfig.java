@@ -15,12 +15,16 @@
  */
 package sample.config;
 
+import jakarta.servlet.Filter;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.server.resource.web.OAuth2ProtectedResourceMetadataEndpointFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 
 /**
  * @author Joe Grandja
@@ -33,15 +37,29 @@ public class ResourceServerConfig {
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
-			.securityMatcher("/messages/**")
-				.authorizeHttpRequests(authorize ->
-						authorize.requestMatchers("/messages/**").hasAuthority("SCOPE_message.read")
-				)
-				.oauth2ResourceServer(oauth2ResourceServer ->
-						oauth2ResourceServer.jwt(Customizer.withDefaults())
-				);
+			.authorizeHttpRequests(authorize ->
+				authorize.requestMatchers("/messages/**").hasAuthority("SCOPE_message.read")
+			)
+			.oauth2ResourceServer(oauth2ResourceServer ->
+				oauth2ResourceServer.jwt(Customizer.withDefaults())
+			)
+			.addFilterBefore(protectedResourceMetadataEndpointFilter(), AbstractPreAuthenticatedProcessingFilter.class);
 		return http.build();
 	}
 	// @formatter:on
+
+	private Filter protectedResourceMetadataEndpointFilter() {
+		OAuth2ProtectedResourceMetadataEndpointFilter protectedResourceMetadataEndpointFilter =
+				new OAuth2ProtectedResourceMetadataEndpointFilter();
+		protectedResourceMetadataEndpointFilter.setProtectedResourceMetadataCustomizer((protectedResourceMetadata) ->
+			protectedResourceMetadata
+					.resource("http://127.0.0.1:8090")
+					.authorizationServer("http://localhost:9000")
+					.scope("message.read")
+					.bearerMethod("header")
+					.resourceName("Messages Resource Server")
+		);
+		return protectedResourceMetadataEndpointFilter;
+	}
 
 }
