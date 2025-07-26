@@ -28,7 +28,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -50,6 +49,7 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 import static org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer.authorizationServer;
+import static sample.config.CustomClientMetadataConfig.configureCustomClientMetadataConverters;
 
 /**
  * @author Joe Grandja
@@ -70,7 +70,10 @@ public class AuthorizationServerConfig {
 				authorizationServer
 					.authorizationEndpoint(authorizationEndpoint ->
 						authorizationEndpoint.consentPage(CUSTOM_CONSENT_PAGE_URI))
-					.oidc(Customizer.withDefaults())	// Enable OpenID Connect 1.0
+					.oidc(oidc ->
+						oidc
+							.clientRegistrationEndpoint(clientRegistrationEndpoint ->
+								clientRegistrationEndpoint.authenticationProviders(configureCustomClientMetadataConverters())))
 			)
 			.authorizeHttpRequests((authorize) ->
 				authorize.anyRequest().authenticated()
@@ -105,7 +108,16 @@ public class AuthorizationServerConfig {
 				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
 				.build();
 
-		return new InMemoryRegisteredClientRepository(messagingClient);
+		RegisteredClient registrarClient = RegisteredClient.withId(UUID.randomUUID().toString())
+				.clientId("registrar-client")
+				.clientSecret("{noop}secret2")
+				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+				.scope("client.create")
+				.scope("client.read")
+				.build();
+
+		return new InMemoryRegisteredClientRepository(messagingClient, registrarClient);
 	}
 	// @formatter:on
 
