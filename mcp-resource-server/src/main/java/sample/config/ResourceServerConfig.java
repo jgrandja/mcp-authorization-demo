@@ -15,8 +15,6 @@
  */
 package sample.config;
 
-import jakarta.servlet.Filter;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -39,14 +37,22 @@ public class ResourceServerConfig {
 	SecurityFilterChain securityFilterChain(
 			HttpSecurity http,
 			ResourceIdentifier resourceIdentifier) throws Exception {
+
+		OAuth2ProtectedResourceMetadataEndpointFilter protectedResourceMetadataEndpointFilter =
+				protectedResourceMetadataEndpointFilter(resourceIdentifier);
+
 		http
 			.authorizeHttpRequests(authorize ->
 				authorize.requestMatchers("/messages/**").hasAuthority("SCOPE_message.read")
 			)
 			.oauth2ResourceServer(oauth2ResourceServer ->
-				oauth2ResourceServer.jwt(Customizer.withDefaults())
+				oauth2ResourceServer
+					.jwt(Customizer.withDefaults())
+					.authenticationEntryPoint(
+							new CustomBearerTokenAuthenticationEntryPoint(
+									protectedResourceMetadataEndpointFilter.getProtectedResourceMetadataEndpointUri()))
 			)
-			.addFilterBefore(protectedResourceMetadataEndpointFilter(resourceIdentifier), AbstractPreAuthenticatedProcessingFilter.class);
+			.addFilterBefore(protectedResourceMetadataEndpointFilter, AbstractPreAuthenticatedProcessingFilter.class);
 		return http.build();
 	}
 	// @formatter:on
@@ -56,7 +62,7 @@ public class ResourceServerConfig {
 		return new ResourceIdentifier("http://127.0.0.1:8090");
 	}
 
-	private Filter protectedResourceMetadataEndpointFilter(ResourceIdentifier resourceIdentifier) {
+	private OAuth2ProtectedResourceMetadataEndpointFilter protectedResourceMetadataEndpointFilter(ResourceIdentifier resourceIdentifier) {
 		OAuth2ProtectedResourceMetadataEndpointFilter protectedResourceMetadataEndpointFilter =
 				new OAuth2ProtectedResourceMetadataEndpointFilter(resourceIdentifier);
 		protectedResourceMetadataEndpointFilter.setProtectedResourceMetadataCustomizer((protectedResourceMetadata) ->
