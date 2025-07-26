@@ -50,14 +50,27 @@ public final class OAuth2ProtectedResourceMetadataEndpointFilter extends OncePer
 	private static final GenericHttpMessageConverter<Object> JSON_MESSAGE_CONVERTER = HttpMessageConverters
 			.getJsonMessageConverter();
 
-	private final RequestMatcher requestMatcher = PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/.well-known/oauth-protected-resource");
+	private static final String OAUTH2_PROTECTED_RESOURCE_METADATA_ENDPOINT_URI = "/.well-known/oauth-protected-resource";
+
+	private final RequestMatcher requestMatcher = PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, OAUTH2_PROTECTED_RESOURCE_METADATA_ENDPOINT_URI);
+
+	private final ResourceIdentifier resourceIdentifier;
 
 	private Consumer<OAuth2ProtectedResourceMetadata.Builder> protectedResourceMetadataCustomizer = (protectedResourceMetadata) -> { };
 
-    public void setProtectedResourceMetadataCustomizer(
+	public OAuth2ProtectedResourceMetadataEndpointFilter(ResourceIdentifier resourceIdentifier) {
+		Assert.notNull(resourceIdentifier, "resourceIdentifier cannot be null");
+		this.resourceIdentifier = resourceIdentifier;
+	}
+
+	public void setProtectedResourceMetadataCustomizer(
 			Consumer<OAuth2ProtectedResourceMetadata.Builder> protectedResourceMetadataCustomizer) {
 		Assert.notNull(protectedResourceMetadataCustomizer, "protectedResourceMetadataCustomizer cannot be null");
 		this.protectedResourceMetadataCustomizer = protectedResourceMetadataCustomizer;
+	}
+
+	public String getProtectedResourceMetadataEndpointUri() {
+		return this.resourceIdentifier.getId().concat(OAUTH2_PROTECTED_RESOURCE_METADATA_ENDPOINT_URI);
 	}
 
 	@Override
@@ -69,7 +82,8 @@ public final class OAuth2ProtectedResourceMetadataEndpointFilter extends OncePer
 			return;
 		}
 
-		OAuth2ProtectedResourceMetadata.Builder builder = OAuth2ProtectedResourceMetadata.builder();
+		OAuth2ProtectedResourceMetadata.Builder builder = OAuth2ProtectedResourceMetadata.builder()
+				.resource(this.resourceIdentifier.getId());
 
 		this.protectedResourceMetadataCustomizer.accept(builder);
 
