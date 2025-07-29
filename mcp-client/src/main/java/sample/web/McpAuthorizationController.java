@@ -64,6 +64,7 @@ public class McpAuthorizationController {
 	private final OAuth2AuthorizedClientManager authorizedClientManager;
 	private final ManagedClientRegistrationRepository managedClientRegistrationRepository;
 	private final ClientRegistrar clientRegistrar = new ClientRegistrar(RestClient.builder().build());
+	private final AuthorizationServerDiscoverer authorizationServerDiscoverer = new AuthorizationServerDiscoverer();
 
 	public McpAuthorizationController(
 			@Qualifier("oauth2-rest-client") RestClient restClient,
@@ -95,40 +96,23 @@ public class McpAuthorizationController {
 	}
 
 	@ExceptionHandler(HttpClientErrorException.Unauthorized.class)
-	public String handleUnauthorized(Model model, HttpClientErrorException.Unauthorized unauthorizedException) {
+	public String handleUnauthorized(HttpClientErrorException.Unauthorized unauthorizedException) {
 		HttpHeaders responseHeaders = unauthorizedException.getResponseHeaders();
 		String wwwAuthenticateHeader = responseHeaders.getFirst(HttpHeaders.WWW_AUTHENTICATE);
-		Map<String, String> parameters = parseWwwAuthenticateHeader(wwwAuthenticateHeader);
-		String resourceMetadataUri = parameters.get("resource_metadata");
-		if (StringUtils.hasText(resourceMetadataUri)) {
-			Map<String, Object> protectedResourceMetadata = this.restClient
-					.get()
-					.uri(resourceMetadataUri)
-					.retrieve()
-					.body(STRING_OBJECT_MAP);
+		String resourceMetadataUri = AuthorizationServerDiscoverer.parseResourceMetadataUri(wwwAuthenticateHeader);
 
-			@SuppressWarnings("unchecked")
-			String resourceId = (String) protectedResourceMetadata.get("resource");
-			@SuppressWarnings("unchecked")
-			List<String> authorizationServers = (List<String>) protectedResourceMetadata.get("authorization_servers");
-			String authorizationServer = authorizationServers.get(0);
-			Map<String, Object> authorizationServerMetadata = this.restClient
-					.get()
-					.uri(authorizationServer.concat("/.well-known/openid-configuration"))
-					.retrieve()
-					.body(STRING_OBJECT_MAP);
+		AuthorizationServerDiscoverer.AuthorizationServerDiscoveryResponse authorizationServerDiscoveryResponse =
+				this.authorizationServerDiscoverer.discover(resourceMetadataUri);
+		AuthorizationServerDiscoverer.ProtectedResourceMetadata protectedResourceMetadata =
+				authorizationServerDiscoveryResponse.protectedResourceMetadata();
+		AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata =
+				authorizationServerDiscoveryResponse.authorizationServerMetadata();
 
-			@SuppressWarnings("unchecked")
-			String clientRegistrationEndpoint = (String) authorizationServerMetadata.get("registration_endpoint");
+		// FIXME Check to make sure client is not already registered from previous flow
+		ClientRegistration clientRegistration = registerClient(
+				protectedResourceMetadata.resource(), authorizationServerMetadata.registrationEndpoint());
 
-			// FIXME Check to make sure client is not already registered from previous flow
-			ClientRegistration clientRegistration = registerClient(resourceId, clientRegistrationEndpoint);
-
-			return "redirect:/mcp?registrationId=" + clientRegistration.getRegistrationId() + "&resource=" + resourceId;
-		}
-
-		model.addAttribute("error", unauthorizedException.getMessage());
-		return "index";
+		return "redirect:/mcp?registrationId=" + clientRegistration.getRegistrationId() + "&resource=" + protectedResourceMetadata.resource();
 	}
 
 	private ClientRegistration registerClient(String resourceId, String clientRegistrationEndpoint) {
