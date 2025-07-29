@@ -15,27 +15,13 @@
  */
 package sample.web;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import sample.config.ManagedClientRegistrationRepository;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.AuthorityUtils;
-import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -53,28 +39,20 @@ import static org.springframework.security.oauth2.client.web.client.RequestAttri
  */
 @Controller
 public class McpAuthorizationController {
-	private static final ParameterizedTypeReference<Map<String, Object>> STRING_OBJECT_MAP = new ParameterizedTypeReference<>() {
-	};
-
-	private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous",
-			"anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
-
 	private final RestClient restClient;
 	private final String messagesBaseUri;
-	private final OAuth2AuthorizedClientManager authorizedClientManager;
-	private final ManagedClientRegistrationRepository managedClientRegistrationRepository;
-	private final ClientRegistrar clientRegistrar = new ClientRegistrar(RestClient.builder().build());
-	private final AuthorizationServerDiscoverer authorizationServerDiscoverer = new AuthorizationServerDiscoverer();
+	private final AuthorizationServerDiscoverer authorizationServerDiscoverer;
+	private final DynamicClientRegistrar dynamicClientRegistrar;
 
 	public McpAuthorizationController(
 			@Qualifier("oauth2-rest-client") RestClient restClient,
 			@Value("${messages.base-uri}") String messagesBaseUri,
-			OAuth2AuthorizedClientManager authorizedClientManager,
-			ManagedClientRegistrationRepository managedClientRegistrationRepository) {
+			ManagedClientRegistrationRepository managedClientRegistrationRepository,
+			OAuth2AuthorizedClientManager authorizedClientManager) {
 		this.restClient = restClient;
 		this.messagesBaseUri = messagesBaseUri;
-		this.authorizedClientManager = authorizedClientManager;
-		this.managedClientRegistrationRepository = managedClientRegistrationRepository;
+		this.authorizationServerDiscoverer = new AuthorizationServerDiscoverer();
+		this.dynamicClientRegistrar = new DynamicClientRegistrar(managedClientRegistrationRepository, authorizedClientManager);
 	}
 
 	@GetMapping(value = "/mcp")
@@ -97,81 +75,29 @@ public class McpAuthorizationController {
 
 	@ExceptionHandler(HttpClientErrorException.Unauthorized.class)
 	public String handleUnauthorized(HttpClientErrorException.Unauthorized unauthorizedException) {
-		HttpHeaders responseHeaders = unauthorizedException.getResponseHeaders();
-		String wwwAuthenticateHeader = responseHeaders.getFirst(HttpHeaders.WWW_AUTHENTICATE);
+		String wwwAuthenticateHeader = unauthorizedException.getResponseHeaders().getFirst(HttpHeaders.WWW_AUTHENTICATE);
+
 		String resourceMetadataUri = AuthorizationServerDiscoverer.parseResourceMetadataUri(wwwAuthenticateHeader);
 
 		AuthorizationServerDiscoverer.AuthorizationServerDiscoveryResponse authorizationServerDiscoveryResponse =
 				this.authorizationServerDiscoverer.discover(resourceMetadataUri);
+
 		AuthorizationServerDiscoverer.ProtectedResourceMetadata protectedResourceMetadata =
 				authorizationServerDiscoveryResponse.protectedResourceMetadata();
 		AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata =
 				authorizationServerDiscoveryResponse.authorizationServerMetadata();
 
 		// FIXME Check to make sure client is not already registered from previous flow
-		ClientRegistration clientRegistration = registerClient(
-				protectedResourceMetadata.resource(), authorizationServerMetadata.registrationEndpoint());
+		ClientRegistration clientRegistration = this.dynamicClientRegistrar.registerClient(
+				protectedResourceMetadata, authorizationServerMetadata);
 
 		return "redirect:/mcp?registrationId=" + clientRegistration.getRegistrationId() + "&resource=" + protectedResourceMetadata.resource();
-	}
-
-	private ClientRegistration registerClient(String resourceId, String clientRegistrationEndpoint) {
-		OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.withClientRegistrationId("registrar-client")
-				.principal(ANONYMOUS_AUTHENTICATION)
-				.build();
-		OAuth2AuthorizedClient authorizedRegistrarClient = this.authorizedClientManager.authorize(authorizeRequest);
-
-		ClientRegistrar.ClientRegistrationResponse clientRegistrationResponse = this.clientRegistrar.registerClient(
-				resourceId, clientRegistrationEndpoint, authorizedRegistrarClient.getAccessToken().getTokenValue());
-
-		String registrationId = clientRegistrationResponse.clientName().concat("-").concat(UUID.randomUUID().toString());
-
-		List<String> scopes = Arrays.asList(StringUtils.delimitedListToStringArray(clientRegistrationResponse.scope(), " "));
-
-		ClientRegistration.Builder builder = ClientRegistration.withRegistrationId(registrationId)
-				.clientId(clientRegistrationResponse.clientId())
-				.clientSecret(clientRegistrationResponse.clientSecret())
-				.clientAuthenticationMethod(ClientAuthenticationMethod.valueOf(clientRegistrationResponse.tokenEndpointAuthenticationMethod()))
-				.scope(scopes)
-				.clientName(clientRegistrationResponse.clientName())
-				.authorizationUri(authorizedRegistrarClient.getClientRegistration().getProviderDetails().getAuthorizationUri())
-				.tokenUri(authorizedRegistrarClient.getClientRegistration().getProviderDetails().getTokenUri());
-
-		clientRegistrationResponse.grantTypes().forEach((grantType) -> builder.authorizationGrantType(new AuthorizationGrantType(grantType)));
-
-		clientRegistrationResponse.redirectUris().forEach(builder::redirectUri);
-
-		builder.clientSettings(ClientRegistration.ClientSettings.builder().requireProofKey(true).build());
-
-		ClientRegistration clientRegistration = builder.build();
-		this.managedClientRegistrationRepository.register(clientRegistration);
-
-		return clientRegistration;
 	}
 
 	@ExceptionHandler(RestClientResponseException.class)
 	public String handleError(Model model, RestClientResponseException ex) {
 		model.addAttribute("error", ex.getMessage());
 		return "index";
-	}
-
-	private static Map<String, String> parseWwwAuthenticateHeader(String wwwAuthenticateHeader) {
-		if (!StringUtils.hasLength(wwwAuthenticateHeader)
-				|| !StringUtils.startsWithIgnoreCase(wwwAuthenticateHeader, "bearer")) {
-			return Map.of();
-		}
-
-		String headerValue = wwwAuthenticateHeader.substring("bearer".length()).stripLeading();
-		Map<String, String> parameters = new HashMap<>();
-		for (String kvPair : StringUtils.delimitedListToStringArray(headerValue, ",")) {
-			String[] kv = StringUtils.split(kvPair, "=");
-			if (kv == null || kv.length <= 1) {
-				continue;
-			}
-			parameters.put(kv[0].trim(), kv[1].trim().replace("\"", ""));
-		}
-
-		return parameters;
 	}
 
 }
