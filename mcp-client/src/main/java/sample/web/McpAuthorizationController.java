@@ -77,7 +77,9 @@ public class McpAuthorizationController {
 	}
 
 	@GetMapping(value = "/mcp")
-	public String mcpAuthorization(@RequestParam(value="registrationId", required = false) String registrationId, Model model) {
+	public String mcpAuthorization(@RequestParam(value="registrationId", required = false) String registrationId,
+								   @RequestParam(value="resource", required = false) String resource,
+								   Model model) {
 		RestClient.RequestHeadersSpec<?> requestSpec = this.restClient
 				.get()
 				.uri(this.messagesBaseUri);
@@ -119,9 +121,10 @@ public class McpAuthorizationController {
 			@SuppressWarnings("unchecked")
 			String clientRegistrationEndpoint = (String) authorizationServerMetadata.get("registration_endpoint");
 
+			// FIXME Check to make sure client is not already registered from previous flow
 			ClientRegistration clientRegistration = registerClient(resourceId, clientRegistrationEndpoint);
 
-			return "redirect:/mcp?registrationId=" + clientRegistration.getRegistrationId();
+			return "redirect:/mcp?registrationId=" + clientRegistration.getRegistrationId() + "&resource=" + resourceId;
 		}
 
 		model.addAttribute("error", unauthorizedException.getMessage());

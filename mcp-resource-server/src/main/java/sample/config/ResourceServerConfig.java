@@ -15,11 +15,18 @@
  */
 package sample.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtAudienceValidator;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.web.OAuth2ProtectedResourceMetadataEndpointFilter;
 import org.springframework.security.oauth2.server.resource.web.ResourceIdentifier;
 import org.springframework.security.web.SecurityFilterChain;
@@ -60,6 +67,18 @@ public class ResourceServerConfig {
 	@Bean
 	public ResourceIdentifier resourceIdentifier() {
 		return new ResourceIdentifier("http://127.0.0.1:8090");
+	}
+
+	@Bean
+	public JwtDecoder jwtDecoder(ResourceIdentifier resourceIdentifier,
+								 @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri) {
+
+		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+		OAuth2TokenValidator<Jwt> jwtValidator = JwtValidators.createDefaultWithValidators(
+				new JwtAudienceValidator(resourceIdentifier.getId()));
+		jwtDecoder.setJwtValidator(jwtValidator);
+
+		return jwtDecoder;
 	}
 
 	private OAuth2ProtectedResourceMetadataEndpointFilter protectedResourceMetadataEndpointFilter(ResourceIdentifier resourceIdentifier) {

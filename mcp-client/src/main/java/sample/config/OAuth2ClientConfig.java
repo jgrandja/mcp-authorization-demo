@@ -22,7 +22,16 @@ import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2Clien
 import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientPropertiesMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * @author Joe Grandja
@@ -37,6 +46,38 @@ public class OAuth2ClientConfig {
         Map<String, ClientRegistration> clientRegistrations = new OAuth2ClientPropertiesMapper(clientProperties).asClientRegistrations();
         clientRegistrations.values().forEach(clientRegistrationRepository::register);
         return clientRegistrationRepository;
+    }
+
+    @Bean
+    public OAuth2AuthorizationRequestResolver authorizationRequestResolver(ManagedClientRegistrationRepository clientRegistrationRepository) {
+        DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver = new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository);
+        authorizationRequestResolver.setAuthorizationRequestCustomizer((builder) ->
+            builder.additionalParameters((params) -> {
+                if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes servletRequestAttributes) {
+                    // FIXME resource can be multiple values
+                    String resource = servletRequestAttributes.getRequest().getParameter("resource");
+                    if (StringUtils.hasText(resource)) {
+                        params.put("resource", resource);
+                    }
+                }
+            }));
+        return authorizationRequestResolver;
+    }
+
+    @Bean
+    public RestClientAuthorizationCodeTokenResponseClient authorizationCodeTokenResponseClient() {
+        RestClientAuthorizationCodeTokenResponseClient accessTokenResponseClient =
+                new RestClientAuthorizationCodeTokenResponseClient();
+        accessTokenResponseClient.addParametersConverter(grantRequest -> {
+            MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+            OAuth2AuthorizationRequest authorizationRequest = grantRequest.getAuthorizationExchange().getAuthorizationRequest();
+            String resource = (String) authorizationRequest.getAdditionalParameters().get("resource");
+            if (StringUtils.hasText(resource)) {
+                parameters.set("resource", resource);
+            }
+            return parameters;
+        });
+        return accessTokenResponseClient;
     }
 
 }
