@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.security.oauth2.server.resource.web;
+package sample.server.resource.metadata;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import jakarta.servlet.FilterChain;
@@ -24,11 +23,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.GenericHttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -44,11 +43,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public final class OAuth2ProtectedResourceMetadataEndpointFilter extends OncePerRequestFilter {
 
-	private static final ParameterizedTypeReference<Map<String, Object>> STRING_OBJECT_MAP = new ParameterizedTypeReference<>() {
-	};
-
-	private static final GenericHttpMessageConverter<Object> JSON_MESSAGE_CONVERTER = HttpMessageConverters
-			.getJsonMessageConverter();
+	private static final HttpMessageConverter<Object> JSON_MESSAGE_CONVERTER = new MappingJackson2HttpMessageConverter();
 
 	private static final String OAUTH2_PROTECTED_RESOURCE_METADATA_ENDPOINT_URI = "/.well-known/oauth-protected-resource";
 
@@ -69,7 +64,7 @@ public final class OAuth2ProtectedResourceMetadataEndpointFilter extends OncePer
 		this.protectedResourceMetadataCustomizer = protectedResourceMetadataCustomizer;
 	}
 
-	public String getProtectedResourceMetadataEndpointUri() {
+	public String getMetadataEndpointUri() {
 		return this.resourceIdentifier.getId().concat(OAUTH2_PROTECTED_RESOURCE_METADATA_ENDPOINT_URI);
 	}
 
@@ -92,8 +87,7 @@ public final class OAuth2ProtectedResourceMetadataEndpointFilter extends OncePer
 		ServletServerHttpResponse httpResponse = new ServletServerHttpResponse(response);
 		httpResponse.setStatusCode(HttpStatus.OK);
 
-		JSON_MESSAGE_CONVERTER.write(protectedResourceMetadata.getClaims(), STRING_OBJECT_MAP.getType(),
-				MediaType.APPLICATION_JSON, httpResponse);
+		JSON_MESSAGE_CONVERTER.write(protectedResourceMetadata.getClaims(), MediaType.APPLICATION_JSON, httpResponse);
 	}
 
 }

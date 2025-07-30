@@ -30,12 +30,12 @@ import org.springframework.util.Assert;
 /**
  * @author Joe Grandja
  */
-public final class CustomBearerTokenAuthenticationEntryPoint implements AuthenticationEntryPoint {
+final class CustomBearerTokenAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final AuthenticationEntryPoint delegate = new BearerTokenAuthenticationEntryPoint();
 
     private final String protectedResourceMetadataEndpointUri;
 
-    public CustomBearerTokenAuthenticationEntryPoint(String protectedResourceMetadataEndpointUri) {
+    CustomBearerTokenAuthenticationEntryPoint(String protectedResourceMetadataEndpointUri) {
         Assert.hasText(protectedResourceMetadataEndpointUri, "protectedResourceMetadataEndpointUri cannot be empty");
         this.protectedResourceMetadataEndpointUri = protectedResourceMetadataEndpointUri;
     }
@@ -44,15 +44,15 @@ public final class CustomBearerTokenAuthenticationEntryPoint implements Authenti
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         this.delegate.commence(request, response, authException);
 
-        String wwwAuthenticate = response.getHeader(HttpHeaders.WWW_AUTHENTICATE);
-        if ("Bearer".equals(wwwAuthenticate)) {
-            wwwAuthenticate += " ";
+        String wwwAuthenticateHeader = response.getHeader(HttpHeaders.WWW_AUTHENTICATE);
+        if ("bearer".equalsIgnoreCase(wwwAuthenticateHeader)) {
+            wwwAuthenticateHeader += " ";
         } else {
-            wwwAuthenticate += ", ";
+            wwwAuthenticateHeader += ", ";
         }
-        wwwAuthenticate += "resource_metadata=" + this.protectedResourceMetadataEndpointUri;
+        wwwAuthenticateHeader += "resource_metadata=" + this.protectedResourceMetadataEndpointUri;
 
-        response.setHeader(HttpHeaders.WWW_AUTHENTICATE, wwwAuthenticate);
+        response.setHeader(HttpHeaders.WWW_AUTHENTICATE, wwwAuthenticateHeader);
     }
 
 }
