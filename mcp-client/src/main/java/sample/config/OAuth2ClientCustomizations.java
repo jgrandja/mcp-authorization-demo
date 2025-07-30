@@ -16,6 +16,10 @@
 package sample.config;
 
 import java.util.Map;
+import java.util.function.Consumer;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientProperties;
@@ -27,6 +31,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.client.OAuth2ClientHttpRequestInterceptor;
@@ -86,6 +91,26 @@ public class OAuth2ClientCustomizations {
             return parameters;
         });
         return accessTokenResponseClient;
+    }
+
+    @Bean
+    public Consumer<DefaultOAuth2AuthorizedClientManager> authorizedClientManagerCustomizer(
+            final OAuth2AuthorizedClientRepository authorizedClientRepository) {
+        return (authorizedClientManager) ->
+            authorizedClientManager.setAuthorizationSuccessHandler((authorizedClient, principal, attributes) -> {
+                if (authorizedClient.getAccessToken().getScopes().contains("client.create")) {
+                    // Client registration access tokens are scoped to `client.create` and are
+                    // one-time-use only, so don't save the OAuth2AuthorizedClient to allow
+                    // for multiple client registrations.
+                    return;
+                }
+                authorizedClientRepository.saveAuthorizedClient(
+                        authorizedClient,
+                        principal,
+                        (HttpServletRequest) attributes.get(HttpServletRequest.class.getName()),
+                        (HttpServletResponse) attributes.get(HttpServletResponse.class.getName()));
+
+            });
     }
 
     @Bean("oauth2-rest-client")

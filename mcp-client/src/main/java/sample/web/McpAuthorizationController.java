@@ -88,7 +88,6 @@ public class McpAuthorizationController {
 		AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata =
 				authorizationServerDiscoveryResponse.authorizationServerMetadata();
 
-		// FIXME Check to make sure client is not already registered from a previous flow
 		ClientRegistration clientRegistration = this.dynamicClientRegistrar.registerClient(
 				protectedResourceMetadata.resource(), authorizationServerMetadata);
 
