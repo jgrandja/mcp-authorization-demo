@@ -56,9 +56,10 @@ public class McpAuthorizationController {
 	}
 
 	@GetMapping(value = "/mcp")
-	public String mcpAuthorization(@RequestParam(value="registrationId", required = false) String registrationId,
-								   @RequestParam(value="resource", required = false) String resource,
-								   Model model) {
+	public String mcpAuthorization(
+			@RequestParam(value="registrationId", required = false) String registrationId,
+			Model model) {
+
 		RestClient.RequestHeadersSpec<?> requestSpec = this.restClient
 				.get()
 				.uri(this.messagesBaseUri);
@@ -87,9 +88,9 @@ public class McpAuthorizationController {
 		AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata =
 				authorizationServerDiscoveryResponse.authorizationServerMetadata();
 
-		// FIXME Check to make sure client is not already registered from previous flow
+		// FIXME Check to make sure client is not already registered from a previous flow
 		ClientRegistration clientRegistration = this.dynamicClientRegistrar.registerClient(
-				protectedResourceMetadata, authorizationServerMetadata);
+				protectedResourceMetadata.resource(), authorizationServerMetadata);
 
 		return "redirect:/mcp?registrationId=" + clientRegistration.getRegistrationId() + "&resource=" + protectedResourceMetadata.resource();
 	}

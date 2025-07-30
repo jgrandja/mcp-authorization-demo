@@ -15,69 +15,58 @@
  */
 package sample.config;
 
-import java.util.Map;
-
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientProperties;
-import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientPropertiesMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
-import org.springframework.security.oauth2.client.registration.ClientRegistration;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
-import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.util.StringUtils;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
 /**
  * @author Joe Grandja
  */
+@EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({OAuth2ClientProperties.class})
 public class OAuth2ClientConfig {
 
-    @Bean
-    public ManagedClientRegistrationRepository clientRegistrationRepository(OAuth2ClientProperties clientProperties) {
-        ManagedClientRegistrationRepository clientRegistrationRepository = new ManagedClientRegistrationRepository();
-        Map<String, ClientRegistration> clientRegistrations = new OAuth2ClientPropertiesMapper(clientProperties).asClientRegistrations();
-        clientRegistrations.values().forEach(clientRegistrationRepository::register);
-        return clientRegistrationRepository;
-    }
+	// @formatter:off
+	@Bean
+	public SecurityFilterChain securityFilterChain(
+			HttpSecurity http,
+			ClientRegistrationRepository clientRegistrationRepository) throws Exception {
 
-    @Bean
-    public OAuth2AuthorizationRequestResolver authorizationRequestResolver(ManagedClientRegistrationRepository clientRegistrationRepository) {
-        DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver = new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository);
-        authorizationRequestResolver.setAuthorizationRequestCustomizer((builder) ->
-            builder.additionalParameters((params) -> {
-                if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes servletRequestAttributes) {
-                    // FIXME resource can be multiple values
-                    String resource = servletRequestAttributes.getRequest().getParameter("resource");
-                    if (StringUtils.hasText(resource)) {
-                        params.put("resource", resource);
-                    }
-                }
-            }));
-        return authorizationRequestResolver;
-    }
+		http
+			.authorizeHttpRequests(authorize ->
+				authorize
+					.requestMatchers("/webjars/**", "/assets/**", "/logged-out").permitAll()
+					.anyRequest().authenticated()
+			)
+			.oauth2Login(oauth2Login ->
+				oauth2Login
+					.loginPage("/oauth2/authorization/messaging-client-oidc")
+			)
+			.oauth2Client(Customizer.withDefaults())
+			.logout(logout ->
+				logout
+					.logoutSuccessHandler(oidcLogoutSuccessHandler(clientRegistrationRepository))
+			);
+		return http.build();
+	}
+	// @formatter:on
 
-    @Bean
-    public RestClientAuthorizationCodeTokenResponseClient authorizationCodeTokenResponseClient() {
-        RestClientAuthorizationCodeTokenResponseClient accessTokenResponseClient =
-                new RestClientAuthorizationCodeTokenResponseClient();
-        accessTokenResponseClient.addParametersConverter(grantRequest -> {
-            MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
-            OAuth2AuthorizationRequest authorizationRequest = grantRequest.getAuthorizationExchange().getAuthorizationRequest();
-            String resource = (String) authorizationRequest.getAdditionalParameters().get("resource");
-            if (StringUtils.hasText(resource)) {
-                parameters.set("resource", resource);
-            }
-            return parameters;
-        });
-        return accessTokenResponseClient;
-    }
+	private LogoutSuccessHandler oidcLogoutSuccessHandler(
+			ClientRegistrationRepository clientRegistrationRepository) {
+		OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
+				new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
+
+		// Set the location that the End-User's User Agent will be redirected to
+		// after the logout has been performed at the Provider
+		oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}/logged-out");
+
+		return oidcLogoutSuccessHandler;
+	}
 
 }

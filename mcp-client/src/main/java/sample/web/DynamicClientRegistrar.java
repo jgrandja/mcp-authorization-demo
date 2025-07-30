@@ -24,9 +24,7 @@ import sample.config.ManagedClientRegistrationRepository;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
@@ -41,9 +39,6 @@ import org.springframework.web.client.RestClient;
  * @author Joe Grandja
  */
 public final class DynamicClientRegistrar {
-	private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous",
-			"anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
-
 	private final RestClient restClient = RestClient.builder().build();
 	private final ManagedClientRegistrationRepository managedClientRegistrationRepository;
 	private final OAuth2AuthorizedClientManager authorizedClientManager;
@@ -58,7 +53,7 @@ public final class DynamicClientRegistrar {
 	}
 
 	public ClientRegistration registerClient(
-			AuthorizationServerDiscoverer.ProtectedResourceMetadata protectedResourceMetadata,
+			String resourceId,
 			AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata) {
 
 		ClientRegistrationRequest clientRegistrationRequest = new ClientRegistrationRequest(
@@ -68,7 +63,7 @@ public final class DynamicClientRegistrar {
 						AuthorizationGrantType.REFRESH_TOKEN.getValue(),
 						AuthorizationGrantType.CLIENT_CREDENTIALS.getValue()),
 				List.of("http://127.0.0.1:8080/authorized"),
-				List.of(protectedResourceMetadata.resource()),
+				List.of(resourceId),	// Register custom metadata resource_ids
 				"message.read"
 		);
 
@@ -91,7 +86,8 @@ public final class DynamicClientRegistrar {
 		ClientRegistration.Builder builder = ClientRegistration.withRegistrationId(registrationId)
 				.clientId(clientRegistrationResponse.clientId())
 				.clientSecret(clientRegistrationResponse.clientSecret())
-				.clientAuthenticationMethod(ClientAuthenticationMethod.valueOf(clientRegistrationResponse.tokenEndpointAuthenticationMethod()))
+				.clientAuthenticationMethod(
+						ClientAuthenticationMethod.valueOf(clientRegistrationResponse.tokenEndpointAuthenticationMethod()))
 				.scope(scopes)
 				.clientName(clientRegistrationResponse.clientName())
 				.authorizationUri(authorizationServerMetadata.authorizationEndpoint())
@@ -112,7 +108,7 @@ public final class DynamicClientRegistrar {
 
 	private String obtainRegistrationAccessToken() {
 		OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.withClientRegistrationId("registrar-client")
-				.principal(ANONYMOUS_AUTHENTICATION)
+				.principal(SecurityContextHolder.getContext().getAuthentication())
 				.build();
 		OAuth2AuthorizedClient authorizedClient = this.authorizedClientManager.authorize(authorizeRequest);
 		return authorizedClient.getAccessToken().getTokenValue();
