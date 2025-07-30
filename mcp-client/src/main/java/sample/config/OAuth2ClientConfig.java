@@ -46,7 +46,7 @@ public class OAuth2ClientConfig {
 			)
 			.oauth2Login(oauth2Login ->
 				oauth2Login
-					.loginPage("/oauth2/authorization/messaging-client-oidc")
+					.loginPage("/oauth2/authorization/oidc-client")
 			)
 			.oauth2Client(Customizer.withDefaults())
 			.logout(logout ->
