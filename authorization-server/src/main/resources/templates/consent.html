@@ -27,15 +27,6 @@
             </p>
         </div>
     </div>
-    <div th:if="${userCode}" class="row">
-        <div class="col text-center">
-            <p class="alert alert-warning">
-                You have provided the code
-                <span class="fw-bold" th:text="${userCode}"></span>.
-                Verify that this code matches what is shown on your device.
-            </p>
-        </div>
-    </div>
     <div class="row pb-3">
         <div class="col text-center">
             <p>
@@ -49,7 +40,6 @@
             <form name="consent_form" method="post" th:action="${requestURI}">
                 <input type="hidden" name="client_id" th:value="${clientId}">
                 <input type="hidden" name="state" th:value="${state}">
-                <input th:if="${userCode}" type="hidden" name="user_code" th:value="${userCode}">
 
                 <div th:each="scope: ${scopes}" class="form-check py-1">
                     <input class="form-check-input"
