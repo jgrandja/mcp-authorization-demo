@@ -52,7 +52,7 @@ final class AuthorizationServerCustomizations {
 			.authorizationEndpoint(authorizationEndpoint ->
 				authorizationEndpoint
 					.consentPage("/oauth2/consent")
-					.authenticationProviders(configureAuthenticationValidator())
+//					.authenticationProviders(configureAuthenticationValidator())
 			)
 			.oidc(oidc ->
 				oidc

@@ -58,9 +58,9 @@ public class ResourceServerCustomizations {
 									@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri) {
 
 		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-		OAuth2TokenValidator<Jwt> jwtValidator = JwtValidators.createDefaultWithValidators(
-				new JwtAudienceValidator(resourceIdentifier.getId()));
-		jwtDecoder.setJwtValidator(jwtValidator);
+//		OAuth2TokenValidator<Jwt> jwtValidator = JwtValidators.createDefaultWithValidators(
+//				new JwtAudienceValidator(resourceIdentifier.getId()));
+//		jwtDecoder.setJwtValidator(jwtValidator);
 
 		return jwtDecoder;
 	}

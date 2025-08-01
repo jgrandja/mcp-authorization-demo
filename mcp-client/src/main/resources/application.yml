@@ -45,11 +45,13 @@ spring:
             client-id: mcp-client
             client-secret: mcp-secret
             authorization-grant-type: authorization_code
+            scope: message.read
           authserver-client-credentials:
             provider: spring
             client-id: mcp-client
             client-secret: mcp-secret
             authorization-grant-type: client_credentials
+            scope: message.read
         provider:
           spring:
             issuer-uri: http://localhost:9000

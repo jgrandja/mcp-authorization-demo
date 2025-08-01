@@ -117,6 +117,7 @@ public class AuthorizationServerConfig {
 				.redirectUri("http://localhost:8081/authorize/oauth2/code/authserver")
 				.redirectUri("http://localhost:8082/login/oauth2/code/authserver")
 				.redirectUri("http://localhost:8083/login/oauth2/code/authserver")
+				.scope("message.read")
 				.build();
 
 		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient, mcpClient);
@@ -133,10 +134,10 @@ public class AuthorizationServerConfig {
 		return new InMemoryOAuth2AuthorizationConsentService();
 	}
 
-	@Bean
-	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
-		return AuthorizationServerCustomizations::withAudienceRestrictedAccessTokens;
-	}
+//	@Bean
+//	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+//		return AuthorizationServerCustomizations::withAudienceRestrictedAccessTokens;
+//	}
 
 	@Bean
 	public JWKSource<SecurityContext> jwkSource() {
