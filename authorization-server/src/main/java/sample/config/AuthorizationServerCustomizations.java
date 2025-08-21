@@ -33,8 +33,10 @@ import org.springframework.security.oauth2.server.authorization.authentication.O
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationProvider;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationValidator;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientCredentialsAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import static sample.config.CustomClientMetadataConfig.configureCustomClientMetadataConverters;
@@ -90,13 +92,15 @@ final class AuthorizationServerCustomizations {
 				return;
 			}
 
-			// Get registered resource ID's
+			// Get registered resource ID's (REQUIRED)
 			List<String> resourceIds = getResourceIds(authenticationContext.getRegisteredClient().getClientSettings());
 
 			String resource = (String) authorizationCodeRequestAuthentication.getAdditionalParameters().get(RESOURCE_PARAM_NAME);
 
 			// Compare resource parameter against registered resource ID's
-			if (!StringUtils.hasText(resource) || !resourceIds.contains(resource)) {
+			if (CollectionUtils.isEmpty(resourceIds) ||
+					!StringUtils.hasText(resource) ||
+					!resourceIds.contains(resource)) {
 				OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST);
 				throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, null);
 			}
@@ -104,9 +108,17 @@ final class AuthorizationServerCustomizations {
 	}
 
 	static void withAudienceRestrictedAccessTokens(JwtEncodingContext context) {
+		if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN) &&
+				(context.getAuthorizedScopes().contains(OidcScopes.OPENID) ||
+						context.getAuthorizedScopes().contains("client.create") ||
+						context.getAuthorizedScopes().contains("client.read"))) {
+			// No customizations needed for access tokens in
+			// OpenID Connect and Dynamic Client Registration flow
+			return;
+		}
+
 		if (AuthorizationGrantType.AUTHORIZATION_CODE.equals(context.getAuthorizationGrantType()) &&
-				context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN) &&
-				!context.getAuthorizedScopes().contains(OidcScopes.OPENID)) {
+				context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
 
 			OAuth2AuthorizationRequest authorizationRequest =
 					context.getAuthorization().getAttribute(OAuth2AuthorizationRequest.class.getName());
@@ -121,7 +133,26 @@ final class AuthorizationServerCustomizations {
 			}
 
 			context.getClaims().claim(JwtClaimNames.AUD, authorizationRequestResource);
+
+		} else if (AuthorizationGrantType.CLIENT_CREDENTIALS.equals(context.getAuthorizationGrantType()) &&
+				context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
+
+			OAuth2ClientCredentialsAuthenticationToken clientCredentialsAuthentication = context.getAuthorizationGrant();
+			String resource = (String) clientCredentialsAuthentication.getAdditionalParameters().get(RESOURCE_PARAM_NAME);
+
+			// Get registered resource ID's (REQUIRED)
+			List<String> resourceIds = getResourceIds(context.getRegisteredClient().getClientSettings());
+
+			// Compare resource parameter against registered resource ID's
+			if (CollectionUtils.isEmpty(resourceIds) ||
+					!StringUtils.hasText(resource) ||
+					!resourceIds.contains(resource)) {
+				throw new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_REQUEST);
+			}
+
+			context.getClaims().claim(JwtClaimNames.AUD, resource);
 		}
+
 	}
 
 }

@@ -102,7 +102,6 @@ public class AuthorizationServerConfig {
 				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
 				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
 				.scope("client.create")
-				.scope("client.read")
 				.build();
 
 		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient);

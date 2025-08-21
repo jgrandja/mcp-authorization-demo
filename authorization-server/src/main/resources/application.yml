@@ -1,5 +1,12 @@
 server:
   port: 9000
+  # Cookies are per-domain and multiple apps running on localhost on different ports share cookies.
+  # This can create conflicts. We ensure the session cookie is different from the cookie that
+  # the client application uses.
+  servlet:
+    session:
+      cookie:
+        name: AUTHSERVER_SESSION
 
 logging:
   level:
