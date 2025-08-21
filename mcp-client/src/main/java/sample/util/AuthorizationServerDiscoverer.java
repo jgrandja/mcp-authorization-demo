@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sample.web;
+package sample.util;
 
 import java.util.HashMap;
 import java.util.List;

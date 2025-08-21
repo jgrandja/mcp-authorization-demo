@@ -15,13 +15,18 @@
  */
 package sample.web;
 
+import java.util.List;
+
 import sample.config.ManagedClientRegistrationRepository;
+import sample.util.AuthorizationServerDiscoverer;
+import sample.util.DynamicClientRegistrar;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -88,8 +93,27 @@ public class McpAuthorizationController {
 		AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata =
 				authorizationServerDiscoveryResponse.authorizationServerMetadata();
 
-		ClientRegistration clientRegistration = this.dynamicClientRegistrar.registerClient(
-				protectedResourceMetadata.resource(), authorizationServerMetadata);
+		DynamicClientRegistrar.ClientRegistrationRequest clientRegistrationRequest =
+				new DynamicClientRegistrar.ClientRegistrationRequest(
+						"mcp-client",
+						List.of(
+								AuthorizationGrantType.AUTHORIZATION_CODE.getValue(),
+								AuthorizationGrantType.CLIENT_CREDENTIALS.getValue()),
+						List.of("http://127.0.0.1:8080/authorized"),
+						List.of(protectedResourceMetadata.resource()),	// Register custom metadata resource_ids
+						"message.read"
+		);
+
+		List<ClientRegistration> clientRegistrations = this.dynamicClientRegistrar.registerClient(
+				clientRegistrationRequest, authorizationServerMetadata);
+
+		ClientRegistration clientRegistration = null;
+		for (ClientRegistration registration : clientRegistrations) {
+			if (registration.getAuthorizationGrantType().equals(AuthorizationGrantType.AUTHORIZATION_CODE)) {
+				clientRegistration = registration;
+				break;
+			}
+		}
 
 		return "redirect:/mcp?registrationId=" + clientRegistration.getRegistrationId() + "&resource=" + protectedResourceMetadata.resource();
 	}

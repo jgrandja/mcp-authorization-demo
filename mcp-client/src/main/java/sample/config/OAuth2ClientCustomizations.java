@@ -101,9 +101,8 @@ public class OAuth2ClientCustomizations {
         return (authorizedClientManager) ->
             authorizedClientManager.setAuthorizationSuccessHandler((authorizedClient, principal, attributes) -> {
                 if (authorizedClient.getAccessToken().getScopes().contains("client.create")) {
-                    // Client registration access tokens are scoped to `client.create` and are
-                    // one-time-use only, so don't save the OAuth2AuthorizedClient to allow
-                    // for multiple client registrations.
+                    // Dynamic client registration access tokens are scoped to 'client.create' and are one-time-use only,
+                    // so no need to save the OAuth2AuthorizedClient since the access token is no longer valid.
                     return;
                 }
                 authorizedClientRepository.saveAuthorizedClient(

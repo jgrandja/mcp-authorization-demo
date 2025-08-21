@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sample.web;
+package sample.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +25,7 @@ import sample.config.ManagedClientRegistrationRepository;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -52,20 +54,9 @@ public final class DynamicClientRegistrar {
 		this.authorizedClientManager = authorizedClientManager;
 	}
 
-	public ClientRegistration registerClient(
-			String resourceId,
+	public List<ClientRegistration> registerClient(
+			ClientRegistrationRequest clientRegistrationRequest,
 			AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata) {
-
-		ClientRegistrationRequest clientRegistrationRequest = new ClientRegistrationRequest(
-				"mcp-client",
-				List.of(
-						AuthorizationGrantType.AUTHORIZATION_CODE.getValue(),
-						AuthorizationGrantType.REFRESH_TOKEN.getValue(),
-						AuthorizationGrantType.CLIENT_CREDENTIALS.getValue()),
-				List.of("http://127.0.0.1:8080/authorized"),
-				List.of(resourceId),	// Register custom metadata resource_ids
-				"message.read"
-		);
 
 		String registrationAccessToken = obtainRegistrationAccessToken();
 
@@ -79,42 +70,83 @@ public final class DynamicClientRegistrar {
 				.retrieve()
 				.body(ClientRegistrationResponse.class);
 
-		String registrationId = clientRegistrationResponse.clientName().concat("-").concat(UUID.randomUUID().toString());
+		List<ClientRegistration> clientRegistrations = new ArrayList<>();
 
-		List<String> scopes = Arrays.asList(StringUtils.delimitedListToStringArray(clientRegistrationResponse.scope(), " "));
+		if (clientRegistrationResponse.grantTypes().contains(AuthorizationGrantType.AUTHORIZATION_CODE.getValue())) {
+			clientRegistrations.add(
+					registerClientAuthorizationCodeGrant(clientRegistrationResponse, authorizationServerMetadata));
+		}
+		if (clientRegistrationResponse.grantTypes().contains(AuthorizationGrantType.CLIENT_CREDENTIALS.getValue())) {
+			clientRegistrations.add(
+					registerClientClientCredentialsGrant(clientRegistrationResponse, authorizationServerMetadata));
+		}
 
-		ClientRegistration.Builder builder = ClientRegistration.withRegistrationId(registrationId)
-				.clientId(clientRegistrationResponse.clientId())
-				.clientSecret(clientRegistrationResponse.clientSecret())
-				.clientAuthenticationMethod(
-						ClientAuthenticationMethod.valueOf(clientRegistrationResponse.tokenEndpointAuthenticationMethod()))
-				.scope(scopes)
-				.clientName(clientRegistrationResponse.clientName())
+		return clientRegistrations;
+	}
+
+	private ClientRegistration registerClientAuthorizationCodeGrant(
+			ClientRegistrationResponse clientRegistrationResponse,
+			AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata) {
+
+		ClientRegistration.Builder builder = builder(clientRegistrationResponse, authorizationServerMetadata)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.authorizationUri(authorizationServerMetadata.authorizationEndpoint())
-				.tokenUri(authorizationServerMetadata.tokenEndpoint());
-
-		clientRegistrationResponse.grantTypes().forEach((grantType) ->
-				builder.authorizationGrantType(new AuthorizationGrantType(grantType)));
+				.clientSettings(ClientRegistration.ClientSettings.builder().requireProofKey(true).build());
 
 		clientRegistrationResponse.redirectUris().forEach(builder::redirectUri);
 
-		builder.clientSettings(ClientRegistration.ClientSettings.builder().requireProofKey(true).build());
-
 		ClientRegistration clientRegistration = builder.build();
+
 		this.managedClientRegistrationRepository.register(clientRegistration);
 
 		return clientRegistration;
 	}
 
-	private String obtainRegistrationAccessToken() {
-		OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.withClientRegistrationId("registrar-client")
-				.principal(SecurityContextHolder.getContext().getAuthentication())
+	private ClientRegistration registerClientClientCredentialsGrant(
+			ClientRegistrationResponse clientRegistrationResponse,
+			AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata) {
+
+		ClientRegistration clientRegistration = builder(clientRegistrationResponse, authorizationServerMetadata)
+				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
 				.build();
+
+		this.managedClientRegistrationRepository.register(clientRegistration);
+
+		return clientRegistration;
+	}
+
+	private ClientRegistration.Builder builder(
+			ClientRegistrationResponse clientRegistrationResponse,
+			AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata) {
+
+		String registrationId = clientRegistrationResponse.clientName().concat("-").concat(UUID.randomUUID().toString());
+
+		List<String> scopes = Arrays.asList(StringUtils.delimitedListToStringArray(clientRegistrationResponse.scope(), " "));
+
+		return ClientRegistration.withRegistrationId(registrationId)
+				.clientId(clientRegistrationResponse.clientId())
+				.clientSecret(clientRegistrationResponse.clientSecret())
+				.clientAuthenticationMethod(
+						ClientAuthenticationMethod.valueOf(clientRegistrationResponse.tokenEndpointAuthenticationMethod()))
+				.scope(scopes)
+				.clientName(registrationId)
+				.tokenUri(authorizationServerMetadata.tokenEndpoint());
+	}
+
+	private String obtainRegistrationAccessToken() {
+		OAuth2AuthorizeRequest.Builder authorizeRequestBuilder = OAuth2AuthorizeRequest.withClientRegistrationId("registrar-client");
+		Authentication principal = SecurityContextHolder.getContext().getAuthentication();
+		if (principal != null) {
+			authorizeRequestBuilder.principal(principal);
+		} else {
+			authorizeRequestBuilder.principal("anonymous");
+		}
+		OAuth2AuthorizeRequest authorizeRequest = authorizeRequestBuilder.build();
 		OAuth2AuthorizedClient authorizedClient = this.authorizedClientManager.authorize(authorizeRequest);
 		return authorizedClient.getAccessToken().getTokenValue();
 	}
 
-	record ClientRegistrationRequest(
+	public record ClientRegistrationRequest(
 			@JsonProperty("client_name") String clientName,
 			@JsonProperty("grant_types") List<String> grantTypes,
 			@JsonProperty("redirect_uris") List<String> redirectUris,
@@ -122,7 +154,7 @@ public final class DynamicClientRegistrar {
 			String scope) {
 	}
 
-	record ClientRegistrationResponse(
+	public record ClientRegistrationResponse(
 			@JsonProperty("registration_access_token") String registrationAccessToken,
 			@JsonProperty("registration_client_uri") String registrationClientUri,
 			@JsonProperty("client_name") String clientName,
