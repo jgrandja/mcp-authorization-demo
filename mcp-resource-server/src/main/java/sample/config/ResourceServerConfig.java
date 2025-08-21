@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 
@@ -36,7 +37,8 @@ public class ResourceServerConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(
 			HttpSecurity http,
-			OAuth2ProtectedResourceMetadataEndpointFilter protectedResourceMetadataEndpointFilter) throws Exception {
+			OAuth2ProtectedResourceMetadataEndpointFilter metadataEndpointFilter,
+			AuthenticationEntryPoint authenticationEntryPoint) throws Exception {
 
 		http
 			.authorizeHttpRequests(authorize ->
@@ -46,12 +48,9 @@ public class ResourceServerConfig {
 			.oauth2ResourceServer(resourceServer ->
 				resourceServer
 					.jwt(Customizer.withDefaults())
-					.authenticationEntryPoint(
-						new CustomBearerTokenAuthenticationEntryPoint(
-							protectedResourceMetadataEndpointFilter.getMetadataEndpointUri())
-					)
+					.authenticationEntryPoint(authenticationEntryPoint)
 			)
-			.addFilterBefore(protectedResourceMetadataEndpointFilter, AbstractPreAuthenticatedProcessingFilter.class);
+			.addFilterBefore(metadataEndpointFilter, AbstractPreAuthenticatedProcessingFilter.class);
 		return http.build();
 	}
 	// @formatter:on
