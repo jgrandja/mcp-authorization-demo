@@ -37,7 +37,7 @@ public class ResourceServerCustomizations {
 
 	@Bean
 	public ResourceIdentifier resourceIdentifier() {
-		return new ResourceIdentifier("http://127.0.0.1:8090");
+		return new ResourceIdentifier("http://localhost:8090/sse");
 	}
 
 	@Bean
@@ -67,7 +67,7 @@ public class ResourceServerCustomizations {
 		OAuth2TokenValidator<Jwt> jwtValidator = JwtValidators.createDefaultWithValidators(
 				// Validate 'aud' claim with expected resource identifier
 				new JwtAudienceValidator(resourceIdentifier.getId()));
-		jwtDecoder.setJwtValidator(jwtValidator);
+//		jwtDecoder.setJwtValidator(jwtValidator);
 
 		return jwtDecoder;
 	}

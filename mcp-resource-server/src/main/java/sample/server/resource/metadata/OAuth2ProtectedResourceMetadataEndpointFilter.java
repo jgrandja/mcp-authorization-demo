@@ -45,7 +45,7 @@ public final class OAuth2ProtectedResourceMetadataEndpointFilter extends OncePer
 
 	private static final HttpMessageConverter<Object> JSON_MESSAGE_CONVERTER = new MappingJackson2HttpMessageConverter();
 
-	private static final String OAUTH2_PROTECTED_RESOURCE_METADATA_ENDPOINT_URI = "/.well-known/oauth-protected-resource";
+	private static final String OAUTH2_PROTECTED_RESOURCE_METADATA_ENDPOINT_URI = "/.well-known/oauth-protected-resource/**";
 
 	private final RequestMatcher requestMatcher = PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, OAUTH2_PROTECTED_RESOURCE_METADATA_ENDPOINT_URI);
 

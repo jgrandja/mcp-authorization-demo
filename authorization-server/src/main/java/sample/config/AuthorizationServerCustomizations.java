@@ -26,6 +26,7 @@ import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationServerMetadata;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationContext;
@@ -54,7 +55,7 @@ final class AuthorizationServerCustomizations {
 			.authorizationEndpoint(authorizationEndpoint ->
 				authorizationEndpoint
 					.consentPage("/oauth2/consent")
-					.authenticationProviders(configureAuthenticationValidator())
+//					.authenticationProviders(configureAuthenticationValidator())
 			)
 			.oidc(oidc ->
 				oidc

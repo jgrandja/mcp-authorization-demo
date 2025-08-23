@@ -15,6 +15,7 @@
  */
 package sample.config;
 
+import java.util.List;
 import java.util.UUID;
 
 import com.nimbusds.jose.jwk.JWKSet;
@@ -49,6 +50,9 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import static org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer.authorizationServer;
 
@@ -75,6 +79,11 @@ public class AuthorizationServerConfig {
 					new LoginUrlAuthenticationEntryPoint("/login"),
 					new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
 				)
+			)
+			// MCP inspector
+			.cors(cors ->
+				cors
+					.configurationSource(corsConfigurationSource())
 			);
 		// @formatter:on
 		return http.build();
@@ -104,7 +113,15 @@ public class AuthorizationServerConfig {
 				.scope("client.create")
 				.build();
 
-		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient);
+		RegisteredClient mcpInspector = RegisteredClient.withId(UUID.randomUUID().toString())
+				.clientId("mcp-inspector")
+				.clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+				.redirectUri("http://localhost:6274/oauth/callback")
+				.scope("message.read")
+				.build();
+
+		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient, mcpInspector);
 	}
 	// @formatter:on
 
@@ -138,6 +155,18 @@ public class AuthorizationServerConfig {
 	@Bean
 	public AuthorizationServerSettings authorizationServerSettings() {
 		return AuthorizationServerSettings.builder().build();
+	}
+
+	private CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(List.of("http://localhost:6274"));	// MCP Inspector
+		configuration.setAllowedMethods(List.of("*"));
+		configuration.setAllowedHeaders(List.of("*"));
+		configuration.setAllowCredentials(true);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
 	}
 
 }
