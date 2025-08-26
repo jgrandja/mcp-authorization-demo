@@ -1,0 +1,12 @@
+
+### GET 'messages' resource without access token
+GET http://127.0.0.1:8090/messages
+
+### GET OAuth2 Protected Resource metadata
+GET http://127.0.0.1:8090/.well-known/oauth-protected-resource
+
+### GET OAuth2 Authorization Server metadata
+GET http://127.0.0.1:9000/.well-known/oauth-authorization-server
+
+### GET OpenID Connect Provider Configuration metadata
+GET http://127.0.0.1:9000/.well-known/openid-configuration
