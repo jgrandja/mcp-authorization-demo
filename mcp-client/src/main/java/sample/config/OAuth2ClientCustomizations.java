@@ -16,10 +16,6 @@
 package sample.config;
 
 import java.util.Map;
-import java.util.function.Consumer;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties;
@@ -37,7 +33,6 @@ import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizati
 import org.springframework.security.oauth2.client.endpoint.RestClientClientCredentialsTokenResponseClient;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
@@ -111,25 +106,6 @@ public class OAuth2ClientCustomizations {
                 .build();
     }
 
-    @Bean
-    public Consumer<DefaultOAuth2AuthorizedClientManager> authorizedClientManagerCustomizer(
-            final OAuth2AuthorizedClientRepository authorizedClientRepository) {
-        return (authorizedClientManager) ->
-            authorizedClientManager.setAuthorizationSuccessHandler((authorizedClient, principal, attributes) -> {
-                if (authorizedClient.getAccessToken().getScopes().contains("client.create")) {
-                    // Dynamic client registration access tokens are scoped to 'client.create' and are one-time-use only,
-                    // so no need to save the OAuth2AuthorizedClient since the access token is no longer valid.
-                    return;
-                }
-                authorizedClientRepository.saveAuthorizedClient(
-                        authorizedClient,
-                        principal,
-                        (HttpServletRequest) attributes.get(HttpServletRequest.class.getName()),
-                        (HttpServletResponse) attributes.get(HttpServletResponse.class.getName()));
-
-            });
-    }
-
     static AuthorizedClientServiceOAuth2AuthorizedClientManager serviceBasedAuthorizedClientManager(
             ManagedClientRegistrationRepository clientRegistrationRepository,
             OAuth2AuthorizedClientService authorizedClientService,
@@ -153,15 +129,6 @@ public class OAuth2ClientCustomizations {
                 new AuthorizedClientServiceOAuth2AuthorizedClientManager(
                         clientRegistrationRepository, authorizedClientService);
         authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
-
-        authorizedClientManager.setAuthorizationSuccessHandler((authorizedClient, principal, attributes) -> {
-            if (authorizedClient.getAccessToken().getScopes().contains("client.create")) {
-                // Dynamic client registration access tokens are scoped to 'client.create' and are one-time-use only,
-                // so no need to save the OAuth2AuthorizedClient since the access token is no longer valid.
-                return;
-            }
-            authorizedClientService.saveAuthorizedClient(authorizedClient, principal);
-        });
 
         return authorizedClientManager;
     }

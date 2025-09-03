@@ -45,10 +45,7 @@ public final class AuthorizationServerDiscoverer {
 
         AuthorizationServerMetadata authorizationServerMetadata = this.restClient
                 .get()
-                // TODO
-                // Need to implement RFC 7591 OAuth 2.0 Dynamic Client Registration Protocol
-                // so instead using the implemented OpenID Connect Dynamic Client Registration 1.0
-                .uri(authorizationServer.concat("/.well-known/openid-configuration"))
+                .uri(authorizationServer.concat("/.well-known/oauth-authorization-server"))
                 .retrieve()
                 .body(AuthorizationServerMetadata.class);
 

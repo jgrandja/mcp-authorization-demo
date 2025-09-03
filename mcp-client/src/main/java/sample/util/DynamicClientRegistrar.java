@@ -23,13 +23,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import sample.config.ManagedClientRegistrationRepository;
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -43,29 +37,22 @@ import org.springframework.web.client.RestClient;
 public final class DynamicClientRegistrar {
 	private final RestClient restClient = RestClient.builder().build();
 	private final ManagedClientRegistrationRepository managedClientRegistrationRepository;
-	private final OAuth2AuthorizedClientManager authorizedClientManager;
 
 	public DynamicClientRegistrar(
-			ManagedClientRegistrationRepository managedClientRegistrationRepository,
-			OAuth2AuthorizedClientManager authorizedClientManager) {
+			ManagedClientRegistrationRepository managedClientRegistrationRepository) {
 		Assert.notNull(managedClientRegistrationRepository, "managedClientRegistrationRepository cannot be null");
-		Assert.notNull(authorizedClientManager, "authorizedClientManager cannot be null");
 		this.managedClientRegistrationRepository = managedClientRegistrationRepository;
-		this.authorizedClientManager = authorizedClientManager;
 	}
 
 	public List<ClientRegistration> registerClient(
 			ClientRegistrationRequest clientRegistrationRequest,
 			AuthorizationServerDiscoverer.AuthorizationServerMetadata authorizationServerMetadata) {
 
-		String registrationAccessToken = obtainRegistrationAccessToken();
-
 		ClientRegistrationResponse clientRegistrationResponse = this.restClient
 				.post()
 				.uri(authorizationServerMetadata.registrationEndpoint())
 				.contentType(MediaType.APPLICATION_JSON)
 				.accept(MediaType.APPLICATION_JSON)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer %s".formatted(registrationAccessToken))
 				.body(clientRegistrationRequest)
 				.retrieve()
 				.body(ClientRegistrationResponse.class);
@@ -131,19 +118,6 @@ public final class DynamicClientRegistrar {
 				.scope(scopes)
 				.clientName(registrationId)
 				.tokenUri(authorizationServerMetadata.tokenEndpoint());
-	}
-
-	private String obtainRegistrationAccessToken() {
-		OAuth2AuthorizeRequest.Builder authorizeRequestBuilder = OAuth2AuthorizeRequest.withClientRegistrationId("registrar-client");
-		Authentication principal = SecurityContextHolder.getContext().getAuthentication();
-		if (principal != null) {
-			authorizeRequestBuilder.principal(principal);
-		} else {
-			authorizeRequestBuilder.principal("anonymous");
-		}
-		OAuth2AuthorizeRequest authorizeRequest = authorizeRequestBuilder.build();
-		OAuth2AuthorizedClient authorizedClient = this.authorizedClientManager.authorize(authorizeRequest);
-		return authorizedClient.getAccessToken().getTokenValue();
 	}
 
 	public record ClientRegistrationRequest(

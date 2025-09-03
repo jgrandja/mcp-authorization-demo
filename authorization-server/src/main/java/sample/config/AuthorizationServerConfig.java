@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -48,7 +49,10 @@ import org.springframework.security.oauth2.server.authorization.token.JwtEncodin
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import static org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer.authorizationServer;
 
@@ -60,16 +64,33 @@ public class AuthorizationServerConfig {
 
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
-	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain authorizationServerSecurityFilterChain(
+			HttpSecurity http,
+			RegisteredClientRepository registeredClientRepository) throws Exception {
+
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = authorizationServer();
+
+		PathPatternRequestMatcher clientRegistrationEndpointMatcher = PathPatternRequestMatcher.withDefaults().matcher(
+				HttpMethod.POST,
+				OAuth2ClientRegistrationEndpointConfigurer.OAUTH2_CLIENT_REGISTRATION_ENDPOINT_URI);
+
+		RequestMatcher endpointsMatcher = new OrRequestMatcher(
+				authorizationServerConfigurer.getEndpointsMatcher(),
+				clientRegistrationEndpointMatcher);
 
 		// @formatter:off
 		http
-			.securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+			.securityMatcher(endpointsMatcher)
 			.with(authorizationServerConfigurer, AuthorizationServerCustomizations::configure)
+			.with(new OAuth2ClientRegistrationEndpointConfigurer(), (clientRegistrationEndpoint) ->
+				clientRegistrationEndpoint
+					.registeredClientRepository(registeredClientRepository)
+			)
 			.authorizeHttpRequests((authorize) ->
 				authorize.anyRequest().authenticated()
 			)
+			.csrf((csrf) ->
+				csrf.ignoringRequestMatchers(clientRegistrationEndpointMatcher))
 			.exceptionHandling((exceptions) -> exceptions
 				.defaultAuthenticationEntryPointFor(
 					new LoginUrlAuthenticationEntryPoint("/login"),
@@ -96,15 +117,7 @@ public class AuthorizationServerConfig {
 				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
 				.build();
 
-		RegisteredClient registrarClient = RegisteredClient.withId(UUID.randomUUID().toString())
-				.clientId("registrar-client")
-				.clientSecret("{noop}secret2")
-				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-				.scope("client.create")
-				.build();
-
-		return new InMemoryRegisteredClientRepository(oidcClient, registrarClient);
+		return new InMemoryRegisteredClientRepository(oidcClient);
 	}
 	// @formatter:on
 

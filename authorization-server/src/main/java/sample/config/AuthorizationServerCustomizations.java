@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
@@ -26,6 +27,7 @@ import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationServerMetadata;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationContext;
@@ -35,12 +37,14 @@ import org.springframework.security.oauth2.server.authorization.authentication.O
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationValidator;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientCredentialsAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
+import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContextHolder;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import static sample.config.CustomClientMetadataConfig.configureCustomClientMetadataConverters;
-import static sample.config.CustomClientMetadataConfig.getResourceIds;
+import static sample.config.OAuth2ClientRegistrationEndpointConfigurer.getResourceIds;
 
 /**
  * @author Joe Grandja
@@ -56,11 +60,10 @@ final class AuthorizationServerCustomizations {
 					.consentPage("/oauth2/consent")
 					.authenticationProviders(configureAuthenticationValidator())
 			)
-			.oidc(oidc ->
-				oidc
-					.clientRegistrationEndpoint(clientRegistrationEndpoint ->
-						clientRegistrationEndpoint
-							.authenticationProviders(configureCustomClientMetadataConverters()))
+			.authorizationServerMetadataEndpoint(authorizationServerMetadataEndpoint ->
+				authorizationServerMetadataEndpoint
+					.authorizationServerMetadataCustomizer(authorizationServerMetadataCustomizer()))
+			.oidc(Customizer.withDefaults()
 			);
 		// @formatter:on
 	}
@@ -107,13 +110,24 @@ final class AuthorizationServerCustomizations {
 		}
 	}
 
+	private static Consumer<OAuth2AuthorizationServerMetadata.Builder> authorizationServerMetadataCustomizer() {
+		return (builder) -> {
+			AuthorizationServerContext authorizationServerContext = AuthorizationServerContextHolder.getContext();
+			String issuer = authorizationServerContext.getIssuer();
+
+			String clientRegistrationEndpoint = UriComponentsBuilder.fromUriString(issuer)
+					.path(OAuth2ClientRegistrationEndpointConfigurer.OAUTH2_CLIENT_REGISTRATION_ENDPOINT_URI)
+					.build()
+					.toUriString();
+
+			builder.clientRegistrationEndpoint(clientRegistrationEndpoint);
+		};
+	}
+
 	static void withAudienceRestrictedAccessTokens(JwtEncodingContext context) {
 		if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN) &&
-				(context.getAuthorizedScopes().contains(OidcScopes.OPENID) ||
-						context.getAuthorizedScopes().contains("client.create") ||
-						context.getAuthorizedScopes().contains("client.read"))) {
-			// No customizations needed for access tokens in
-			// OpenID Connect and Dynamic Client Registration flow
+				context.getAuthorizedScopes().contains(OidcScopes.OPENID)) {
+			// No customizations needed for access tokens in OpenID Connect flow
 			return;
 		}
 

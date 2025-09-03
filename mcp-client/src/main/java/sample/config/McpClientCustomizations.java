@@ -126,7 +126,7 @@ public class McpClientCustomizations {
             this.defaultAuthorizedClientManager = defaultAuthorizedClientManager;
             this.serviceBasedAuthorizedClientManager = serviceBasedAuthorizedClientManager;
             this.authorizationServerDiscoverer = new AuthorizationServerDiscoverer();
-            this.dynamicClientRegistrar = new DynamicClientRegistrar(clientRegistrationRepository, serviceBasedAuthorizedClientManager);
+            this.dynamicClientRegistrar = new DynamicClientRegistrar(clientRegistrationRepository);
         }
 
         @Override

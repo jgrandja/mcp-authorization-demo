@@ -24,7 +24,6 @@ import sample.util.DynamicClientRegistrar;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Controller;
@@ -52,12 +51,11 @@ public class McpAuthorizationController {
 	public McpAuthorizationController(
 			@Qualifier("oauth2-rest-client") RestClient restClient,
 			@Value("${messages.base-uri}") String messagesBaseUri,
-			ManagedClientRegistrationRepository managedClientRegistrationRepository,
-			OAuth2AuthorizedClientManager authorizedClientManager) {
+			ManagedClientRegistrationRepository managedClientRegistrationRepository) {
 		this.restClient = restClient;
 		this.messagesBaseUri = messagesBaseUri;
 		this.authorizationServerDiscoverer = new AuthorizationServerDiscoverer();
-		this.dynamicClientRegistrar = new DynamicClientRegistrar(managedClientRegistrationRepository, authorizedClientManager);
+		this.dynamicClientRegistrar = new DynamicClientRegistrar(managedClientRegistrationRepository);
 	}
 
 	@GetMapping(value = "/mcp")
