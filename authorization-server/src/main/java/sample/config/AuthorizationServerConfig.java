@@ -30,10 +30,12 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
@@ -45,8 +47,9 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
-import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.authorization.token.DelegatingOAuth2TokenGenerator;
+import org.springframework.security.oauth2.server.authorization.token.JwtGenerator;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
@@ -132,8 +135,13 @@ public class AuthorizationServerConfig {
 	}
 
 	@Bean
-	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
-		return AuthorizationServerCustomizations::withAudienceRestrictedAccessTokens;
+	public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource,
+													OAuth2AuthorizedClientService authorizedClientService) {
+		JwtGenerator jwtGenerator = new JwtGenerator(new NimbusJwtEncoder(jwkSource));
+		jwtGenerator.setJwtCustomizer(AuthorizationServerCustomizations::withAudienceRestrictedAccessTokens);
+		FederatedIdentityTokenGenerator federatedIdentityTokenGenerator =
+				new FederatedIdentityTokenGenerator(authorizedClientService);
+		return new DelegatingOAuth2TokenGenerator(federatedIdentityTokenGenerator, jwtGenerator);
 	}
 
 	@Bean
