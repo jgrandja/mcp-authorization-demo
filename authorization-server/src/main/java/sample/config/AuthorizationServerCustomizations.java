@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  */
 package sample.config;
 
-import java.util.List;
-import java.util.function.Consumer;
-
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
@@ -27,24 +25,16 @@ import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
-import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationServerMetadata;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeAuthenticationToken;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationContext;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationException;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationProvider;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationValidator;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientCredentialsAuthenticationToken;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
-import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
-import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContextHolder;
+import org.springframework.security.oauth2.server.authorization.authentication.*;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import static sample.config.OAuth2ClientRegistrationEndpointConfigurer.getResourceIds;
+import java.util.List;
+import java.util.function.Consumer;
+
+import static sample.config.ClientRegistrationCustomizations.getResourceIds;
 
 /**
  * @author Joe Grandja
@@ -60,9 +50,10 @@ final class AuthorizationServerCustomizations {
 					.consentPage("/oauth2/consent")
 					.authenticationProviders(configureAuthenticationValidator())
 			)
-			.authorizationServerMetadataEndpoint(authorizationServerMetadataEndpoint ->
-				authorizationServerMetadataEndpoint
-					.authorizationServerMetadataCustomizer(authorizationServerMetadataCustomizer()))
+			.clientRegistrationEndpoint(clientRegistrationEndpoint ->
+				clientRegistrationEndpoint
+					.openRegistrationAllowed(true)
+					.authenticationProviders(ClientRegistrationCustomizations.configureClientRegistrationConverters()))
 			.oidc(Customizer.withDefaults()
 			);
 		// @formatter:on
@@ -108,20 +99,6 @@ final class AuthorizationServerCustomizations {
 				throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, null);
 			}
 		}
-	}
-
-	private static Consumer<OAuth2AuthorizationServerMetadata.Builder> authorizationServerMetadataCustomizer() {
-		return (builder) -> {
-			AuthorizationServerContext authorizationServerContext = AuthorizationServerContextHolder.getContext();
-			String issuer = authorizationServerContext.getIssuer();
-
-			String clientRegistrationEndpoint = UriComponentsBuilder.fromUriString(issuer)
-					.path(OAuth2ClientRegistrationEndpointConfigurer.OAUTH2_CLIENT_REGISTRATION_ENDPOINT_URI)
-					.build()
-					.toUriString();
-
-			builder.clientRegistrationEndpoint(clientRegistrationEndpoint);
-		};
 	}
 
 	static void withAudienceRestrictedAccessTokens(JwtEncodingContext context) {

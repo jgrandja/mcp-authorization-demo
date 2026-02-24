@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,54 +15,39 @@
  */
 package sample.config;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.oauth2.server.authorization.OAuth2ClientRegistration;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientRegistrationAuthenticationProvider;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
-import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.converter.OAuth2ClientRegistrationRegisteredClientConverter;
 import org.springframework.security.oauth2.server.authorization.converter.RegisteredClientOAuth2ClientRegistrationConverter;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
-import org.springframework.security.oauth2.server.authorization.web.OAuth2ClientRegistrationEndpointFilter;
-import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * @author Joe Grandja
  */
-final class OAuth2ClientRegistrationEndpointConfigurer
-        extends AbstractHttpConfigurer<OAuth2ClientRegistrationEndpointConfigurer, HttpSecurity> {
-
-    static final String OAUTH2_CLIENT_REGISTRATION_ENDPOINT_URI = "/oauth2/register";
+final class ClientRegistrationCustomizations {
 
     private static final String CLIENT_SETTINGS_NAMESPACE = "settings.client.";
 
     private static final String RESOURCE_IDS_KEY = "resource_ids";
     
-    private RegisteredClientRepository registeredClientRepository;
-
-    void registeredClientRepository(RegisteredClientRepository registeredClientRepository) {
-        this.registeredClientRepository = registeredClientRepository;
-    }
-
-    @Override
-    public void configure(HttpSecurity http) {
-        OAuth2ClientRegistrationAuthenticationProvider clientRegistrationAuthenticationProvider =
-                new OAuth2ClientRegistrationAuthenticationProvider(this.registeredClientRepository);
-        clientRegistrationAuthenticationProvider.setRegisteredClientConverter(new CustomRegisteredClientConverter());
-        clientRegistrationAuthenticationProvider.setClientRegistrationConverter(new CustomClientRegistrationConverter());
-        http.authenticationProvider(clientRegistrationAuthenticationProvider);
-
-        AuthenticationManager authenticationManager = http.getSharedObject(AuthenticationManager.class);
-        OAuth2ClientRegistrationEndpointFilter clientRegistrationEndpointFilter =
-                new OAuth2ClientRegistrationEndpointFilter(authenticationManager, OAUTH2_CLIENT_REGISTRATION_ENDPOINT_URI);
-        http.addFilterBefore(clientRegistrationEndpointFilter, AbstractPreAuthenticatedProcessingFilter.class);
+    static Consumer<List<AuthenticationProvider>> configureClientRegistrationConverters() {
+        // @formatter:off
+        return (authenticationProviders) ->
+                authenticationProviders.forEach((authenticationProvider) -> {
+                    if (authenticationProvider instanceof OAuth2ClientRegistrationAuthenticationProvider clientRegistrationAuthenticationProvider) {
+                        clientRegistrationAuthenticationProvider.setRegisteredClientConverter(new CustomRegisteredClientConverter());
+                        clientRegistrationAuthenticationProvider.setClientRegistrationConverter(new CustomClientRegistrationConverter());
+                    }
+                });
+        // @formatter:on
     }
 
     static List<String> getResourceIds(ClientSettings clientSettings) {

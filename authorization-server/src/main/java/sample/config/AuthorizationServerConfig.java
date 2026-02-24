@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,17 @@
  */
 package sample.config;
 
-import java.util.UUID;
-
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import sample.jose.Jwks;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
@@ -41,20 +37,16 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
-import org.springframework.security.web.util.matcher.OrRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
+import sample.jose.Jwks;
 
-import static org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer.authorizationServer;
+import java.util.UUID;
 
 /**
  * @author Joe Grandja
@@ -64,33 +56,18 @@ public class AuthorizationServerConfig {
 
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
-	public SecurityFilterChain authorizationServerSecurityFilterChain(
-			HttpSecurity http,
-			RegisteredClientRepository registeredClientRepository) throws Exception {
-
-		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = authorizationServer();
-
-		PathPatternRequestMatcher clientRegistrationEndpointMatcher = PathPatternRequestMatcher.withDefaults().matcher(
-				HttpMethod.POST,
-				OAuth2ClientRegistrationEndpointConfigurer.OAUTH2_CLIENT_REGISTRATION_ENDPOINT_URI);
-
-		RequestMatcher endpointsMatcher = new OrRequestMatcher(
-				authorizationServerConfigurer.getEndpointsMatcher(),
-				clientRegistrationEndpointMatcher);
-
+	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
 		// @formatter:off
 		http
-			.securityMatcher(endpointsMatcher)
-			.with(authorizationServerConfigurer, AuthorizationServerCustomizations::configure)
-			.with(new OAuth2ClientRegistrationEndpointConfigurer(), (clientRegistrationEndpoint) ->
-				clientRegistrationEndpoint
-					.registeredClientRepository(registeredClientRepository)
-			)
+			.oauth2AuthorizationServer((authorizationServer) -> {
+				http.securityMatcher(authorizationServer.getEndpointsMatcher());
+				AuthorizationServerCustomizations.configure(authorizationServer);
+			})
 			.authorizeHttpRequests((authorize) ->
-				authorize.anyRequest().authenticated()
+				authorize
+					.requestMatchers("/oauth2/register").permitAll()	// Allow for open registration
+					.anyRequest().authenticated()
 			)
-			.csrf((csrf) ->
-				csrf.ignoringRequestMatchers(clientRegistrationEndpointMatcher))
 			.exceptionHandling((exceptions) -> exceptions
 				.defaultAuthenticationEntryPointFor(
 					new LoginUrlAuthenticationEntryPoint("/login"),
