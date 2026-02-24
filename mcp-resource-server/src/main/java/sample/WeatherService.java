@@ -15,22 +15,25 @@
  */
 package sample;
 
-import java.time.LocalDateTime;
-
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
+import org.springaicommunity.mcp.annotation.McpTool;
+import org.springaicommunity.mcp.annotation.McpToolParam;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+
+import java.time.LocalDateTime;
 
 /**
  * @author Joe Grandja
  */
+@Service
 public class WeatherService {
 
 	private final RestClient restClient = RestClient.create();
 
-	@Tool(description = "Get the temperature (in celsius) for a specific location")
-	public WeatherResponse getTemperature(@ToolParam(description = "The location latitude") double latitude,
-			@ToolParam(description = "The location longitude") double longitude) {
+	@McpTool(name = "current-temperature",
+			description = "Get the current temperature (in celsius) for a specific location")
+	public WeatherResponse getTemperature(@McpToolParam(description = "The location latitude") double latitude,
+			@McpToolParam(description = "The location longitude") double longitude) {
 
 		WeatherResponse weatherResponse = this.restClient
 				.get()

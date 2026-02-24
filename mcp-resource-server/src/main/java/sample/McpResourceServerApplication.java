@@ -15,11 +15,8 @@
  */
 package sample;
 
-import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 
 /**
  * @author Joe Grandja
@@ -29,12 +26,6 @@ public class McpResourceServerApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(McpResourceServerApplication.class, args);
-	}
-
-	@Bean
-	public ToolCallbackProvider weatherTools() {
-		WeatherService weatherService = new WeatherService();
-		return MethodToolCallbackProvider.builder().toolObjects(weatherService).build();
 	}
 
 }

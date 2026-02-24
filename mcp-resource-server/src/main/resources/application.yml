@@ -13,7 +13,8 @@ spring:
     mcp:
       server:
         name: mcp-weather-service
-        version: 0.0.1
+        type: SYNC
+        protocol: STREAMABLE
   security:
     oauth2:
       resourceserver:
