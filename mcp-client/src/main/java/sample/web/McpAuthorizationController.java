@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ public class McpAuthorizationController {
 		this.dynamicClientRegistrar = new DynamicClientRegistrar(managedClientRegistrationRepository);
 	}
 
-	@GetMapping(value = "/mcp")
+	@GetMapping(value = "/mcp-authorization")
 	public String mcpAuthorization(
 			@RequestParam(value="registrationId", required = false) String registrationId,
 			Model model) {
@@ -113,7 +113,7 @@ public class McpAuthorizationController {
 			}
 		}
 
-		return "redirect:/mcp?registrationId=" + clientRegistration.getRegistrationId() + "&resource=" + protectedResourceMetadata.resource();
+		return "redirect:/mcp-authorization?registrationId=" + clientRegistration.getRegistrationId() + "&resource=" + protectedResourceMetadata.resource();
 	}
 
 	@ExceptionHandler(RestClientResponseException.class)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,9 @@
  */
 package sample.config;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
-import io.modelcontextprotocol.client.transport.SyncHttpRequestCustomizer;
-import io.modelcontextprotocol.spec.McpClientTransport;
-import sample.util.AuthorizationServerDiscoverer;
-import sample.util.DynamicClientRegistrar;
-
-import org.springframework.ai.mcp.client.autoconfigure.NamedClientMcpTransport;
-import org.springframework.ai.mcp.client.autoconfigure.properties.McpClientCommonProperties;
-import org.springframework.ai.mcp.client.autoconfigure.properties.McpSseClientProperties;
-import org.springframework.beans.factory.ObjectProvider;
+import io.modelcontextprotocol.client.transport.customizer.McpSyncHttpClientRequestCustomizer;
+import io.modelcontextprotocol.common.McpTransportContext;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -50,6 +33,13 @@ import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import sample.util.AuthorizationServerDiscoverer;
+import sample.util.DynamicClientRegistrar;
+
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.util.ArrayList;
+import java.util.List;
 
 import static sample.config.OAuth2ClientCustomizations.serviceBasedAuthorizedClientManager;
 
@@ -57,45 +47,13 @@ import static sample.config.OAuth2ClientCustomizations.serviceBasedAuthorizedCli
  * @author Joe Grandja
  */
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({ McpSseClientProperties.class, McpClientCommonProperties.class })
 public class McpClientCustomizations {
 
-    @Value("${spring.ai.mcp.client.sse.connections.server1.url}")
+    @Value("${spring.ai.mcp.client.streamable-http.connections.server1.url}")
     private String targetResource;
 
     @Bean
-    public List<NamedClientMcpTransport> mcpHttpClientTransports(
-            McpSseClientProperties mcpClientProperties,
-            ObjectProvider<ObjectMapper> objectMapperProvider,
-            SyncHttpRequestCustomizer syncHttpRequestCustomizer) {
-
-        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-
-        List<NamedClientMcpTransport> httpClientTransports = new ArrayList<>();
-
-        for (Map.Entry<String, McpSseClientProperties.SseParameters> mcpServerParameters : mcpClientProperties.getConnections().entrySet()) {
-            String baseUrl = mcpServerParameters.getValue().url();
-            String sseEndpoint = mcpServerParameters.getValue().sseEndpoint() != null ?
-                    mcpServerParameters.getValue().sseEndpoint() :
-                    "/sse";
-
-            // @formatter:off
-            McpClientTransport httpClientTransport = HttpClientSseClientTransport.builder(baseUrl)
-                    .sseEndpoint(sseEndpoint)
-                    .clientBuilder(HttpClient.newBuilder())
-                    .objectMapper(objectMapper)
-                    .httpRequestCustomizer(syncHttpRequestCustomizer)
-                    .build();
-            // @formatter:on
-
-            httpClientTransports.add(new NamedClientMcpTransport(mcpServerParameters.getKey(), httpClientTransport));
-        }
-
-        return httpClientTransports;
-    }
-
-    @Bean
-    public SyncHttpRequestCustomizer syncHttpRequestCustomizer(
+    public McpSyncHttpClientRequestCustomizer mcpSyncHttpClientRequestCustomizer(
             ManagedClientRegistrationRepository clientRegistrationRepository,
             OAuth2AuthorizedClientService authorizedClientService,
             OAuth2AuthorizedClientManager authorizedClientManager) {
@@ -110,7 +68,7 @@ public class McpClientCustomizations {
                 serviceBasedAuthorizedClientManager);
     }
 
-    private static final class OAuth2AccessTokenRequestCustomizer implements SyncHttpRequestCustomizer {
+    private static final class OAuth2AccessTokenRequestCustomizer implements McpSyncHttpClientRequestCustomizer {
         private final OAuth2AuthorizedClientManager defaultAuthorizedClientManager;
         private final AuthorizedClientServiceOAuth2AuthorizedClientManager serviceBasedAuthorizedClientManager;
         private final AuthorizationServerDiscoverer authorizationServerDiscoverer;
@@ -129,8 +87,7 @@ public class McpClientCustomizations {
             this.dynamicClientRegistrar = new DynamicClientRegistrar(clientRegistrationRepository);
         }
 
-        @Override
-        public void customize(HttpRequest.Builder builder, String method, URI endpoint, String body) {
+        public void customize(HttpRequest.Builder builder, String method, URI endpoint, String body, McpTransportContext context) {
             if (this.serviceBasedClientRegistration == null || this.withUserClientRegistration == null) {
                 initClientRegistrations(endpoint);
             }

@@ -12,13 +12,17 @@ spring:
   config:
     import: "optional:classpath:/creds.yaml"
   ai:
+    anthropic:
+      chat:
+        options:
+          model: claude-sonnet-4-5
     mcp:
       client:
-        sse:
+        type: SYNC
+        streamable-http:
           connections:
             server1:
               url: http://127.0.0.1:8090
-        type: sync
   thymeleaf:
     cache: false
   security:
