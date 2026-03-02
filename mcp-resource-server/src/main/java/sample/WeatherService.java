@@ -17,6 +17,7 @@ package sample;
 
 import org.springaicommunity.mcp.annotation.McpTool;
 import org.springaicommunity.mcp.annotation.McpToolParam;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -30,6 +31,7 @@ public class WeatherService {
 
 	private final RestClient restClient = RestClient.create();
 
+	@PreAuthorize("hasAuthority('SCOPE_weather.read')")
 	@McpTool(name = "current-temperature",
 			description = "Get the current temperature (in celsius) for a specific location")
 	public WeatherResponse getTemperature(@McpToolParam(description = "The location latitude") double latitude,

@@ -45,6 +45,14 @@ spring:
             redirect-uri: "http://127.0.0.1:8080/authorized"
             scope: message.read
             client-name: CIMD Client-A
+          cimd-client-b:
+            provider: spring
+            client-id: "http://127.0.0.1:8080/client-metadata/client-b.json"
+            client-authentication-method: none
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://127.0.0.1:8080/authorized"
+            scope: weather.read
+            client-name: CIMD Client-B
         provider:
           spring:
             issuer-uri: http://127.0.0.1:9000

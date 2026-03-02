@@ -38,11 +38,15 @@ public class ClientMetadataController {
 
 	private final ClientMetadata clientAMetadata;
 
+	private final ClientMetadata clientBMetadata;
+
 	public ClientMetadataController(
 			ClientRegistrationRepository clientRegistrationRepository,
 			@Value("${spring.ai.mcp.client.streamable-http.connections.server1.url}") String targetResource) {
 		ClientRegistration clientARegistration = clientRegistrationRepository.findByRegistrationId("cimd-client-a");
 		this.clientAMetadata = convert(clientARegistration, targetResource);
+		ClientRegistration clientBRegistration = clientRegistrationRepository.findByRegistrationId("cimd-client-b");
+		this.clientBMetadata = convert(clientBRegistration, targetResource);
 	}
 
 	@GetMapping("/client-a.json")
@@ -50,6 +54,13 @@ public class ClientMetadataController {
 		return ResponseEntity.ok()
 				.cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic())
 				.body(this.clientAMetadata);
+	}
+
+	@GetMapping("/client-b.json")
+	public ResponseEntity<ClientMetadata> clientB() {
+		return ResponseEntity.ok()
+				.cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic())
+				.body(this.clientBMetadata);
 	}
 
 	private ClientMetadata convert(ClientRegistration clientRegistration, String targetResource) {

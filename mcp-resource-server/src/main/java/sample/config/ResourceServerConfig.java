@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -36,6 +37,7 @@ import java.util.function.Consumer;
  * @author Joe Grandja
  */
 @EnableWebSecurity
+@EnableMethodSecurity
 @Configuration(proxyBeanMethods = false)
 public class ResourceServerConfig {
 	private static final String RESOURCE_IDENTIFIER = "http://127.0.0.1:8090";
@@ -46,9 +48,12 @@ public class ResourceServerConfig {
 		http
 			.authorizeHttpRequests(authorize ->
 				authorize
-					.requestMatchers("/mcp").authenticated()
+					.requestMatchers("/mcp").permitAll()
 					.requestMatchers("/messages/**").hasAuthority("SCOPE_message.read")
 			)
+			.csrf(csrf ->
+				csrf
+					.ignoringRequestMatchers("/mcp"))
 			.oauth2ResourceServer(resourceServer ->
 				resourceServer
 					.jwt(Customizer.withDefaults())
