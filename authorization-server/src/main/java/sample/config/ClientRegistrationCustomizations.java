@@ -54,7 +54,7 @@ final class ClientRegistrationCustomizations {
         return clientSettings.getSetting(CLIENT_SETTINGS_NAMESPACE.concat(RESOURCE_IDS_KEY));
     }
 
-    private static final class CustomRegisteredClientConverter
+    static final class CustomRegisteredClientConverter
             implements Converter<OAuth2ClientRegistration, RegisteredClient> {
 
         private final OAuth2ClientRegistrationRegisteredClientConverter delegate =

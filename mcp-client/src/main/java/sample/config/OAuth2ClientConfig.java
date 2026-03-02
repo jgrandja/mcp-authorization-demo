@@ -42,6 +42,7 @@ public class OAuth2ClientConfig {
 			.authorizeHttpRequests(authorize ->
 				authorize
 					.requestMatchers("/webjars/**", "/assets/**", "/logged-out").permitAll()
+					.requestMatchers("/client-metadata/**").permitAll()
 					.anyRequest().authenticated()
 			)
 			.oauth2Login(oauth2Login ->

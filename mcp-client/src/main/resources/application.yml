@@ -37,6 +37,14 @@ spring:
             redirect-uri: "http://127.0.0.1:8080/login/oauth2/code/oidc-client"
             scope: openid, profile
             client-name: oidc-client
+          cimd-client-a:
+            provider: spring
+            client-id: "http://127.0.0.1:8080/client-metadata/client-a.json"
+            client-authentication-method: none
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://127.0.0.1:8080/authorized"
+            scope: message.read
+            client-name: CIMD Client-A
         provider:
           spring:
             issuer-uri: http://127.0.0.1:9000

@@ -19,11 +19,14 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
+import org.springframework.lang.Nullable;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -79,8 +82,8 @@ public class AuthorizationServerConfig {
 	}
 
 	// @formatter:off
-	@Bean
-	public RegisteredClientRepository registeredClientRepository() {
+	@Bean("default-registeredClientRepository")
+	public RegisteredClientRepository defaultRegisteredClientRepository() {
 		RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
 				.clientId("oidc-client")
 				.clientSecret("{noop}secret")
@@ -95,6 +98,55 @@ public class AuthorizationServerConfig {
 				.build();
 
 		return new InMemoryRegisteredClientRepository(oidcClient);
+	}
+	// @formatter:on
+
+	// @formatter:off
+	@Bean("cimd-registeredClientRepository")
+	public RegisteredClientRepository cimdRegisteredClientRepository() {
+		ClientIdMetadataDocumentRegisteredClientRepository registeredClientRepository = new ClientIdMetadataDocumentRegisteredClientRepository();
+		registeredClientRepository.setRegisteredClientConverter(new ClientRegistrationCustomizations.CustomRegisteredClientConverter());
+		ClientIdMetadataDocumentRegisteredClientRepository.DefaultClientIdMetadataDocumentResolver metadataDocumentResolver =
+				new ClientIdMetadataDocumentRegisteredClientRepository.DefaultClientIdMetadataDocumentResolver();
+		metadataDocumentResolver.setAllowHttpUrlForClientIdentifier(true);
+		metadataDocumentResolver.setAllowLoopbackHostForClientIdentifier(true);
+		registeredClientRepository.setMetadataDocumentResolver(metadataDocumentResolver);
+		return registeredClientRepository;
+	}
+	// @formatter:on
+
+	// @formatter:off
+	@Primary
+	@Bean
+	public RegisteredClientRepository registeredClientRepository(
+			@Qualifier("default-registeredClientRepository") RegisteredClientRepository defaultRegisteredClientRepository,
+			@Qualifier("cimd-registeredClientRepository") RegisteredClientRepository cimdRegisteredClientRepository) {
+		return new RegisteredClientRepository() {
+
+			@Override
+			public void save(RegisteredClient registeredClient) {
+				defaultRegisteredClientRepository.save(registeredClient);
+			}
+
+			@Override
+			public @Nullable RegisteredClient findById(String id) {
+				RegisteredClient registeredClient = defaultRegisteredClientRepository.findById(id);
+				if (registeredClient != null) {
+					return registeredClient;
+				}
+				return cimdRegisteredClientRepository.findById(id);
+			}
+
+			@Override
+			public @Nullable RegisteredClient findByClientId(String clientId) {
+				RegisteredClient registeredClient = defaultRegisteredClientRepository.findByClientId(clientId);
+				if (registeredClient != null) {
+					return registeredClient;
+				}
+				return cimdRegisteredClientRepository.findByClientId(clientId);
+			}
+
+		};
 	}
 	// @formatter:on
 
