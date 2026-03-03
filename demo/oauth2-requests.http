@@ -10,3 +10,9 @@ GET http://127.0.0.1:9000/.well-known/oauth-authorization-server
 
 ### GET OpenID Connect Provider Configuration metadata
 GET http://127.0.0.1:9000/.well-known/openid-configuration
+
+### GET Client-A metadata document
+GET http://127.0.0.1:8080/client-metadata/client-a.json
+
+### GET Client-B metadata document
+GET http://127.0.0.1:8080/client-metadata/client-b.json
